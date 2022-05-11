@@ -23,13 +23,13 @@ use scale_info::TypeInfo;
 
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-#[derive(Clone, Encode, Decode, TypeInfo)]
+#[derive(Clone, Encode, Decode, TypeInfo, Debug)]
 pub struct Dorg<AccountId> {
     account: AccountId,
     members: Vec<AccountId>,
 }
 
-#[derive(Clone, Encode, Decode, TypeInfo)]
+#[derive(Clone, Encode, Decode, TypeInfo, Debug)]
 pub struct CallHash {
     call_hash: (),
 }
@@ -83,17 +83,33 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		SomethingStored(u32, T::AccountId),
+        /// Dorg has been created [dorg]
+        DorgCreated(T::AccountId),
+        /// a Call has been submited [dorg, call_hash, submiter]
+        CallSubmitted(T::AccountId, (), T::AccountId),
+        /// a Call has been voted [dorg, call_hash, voter]
+        CallVoted(T::AccountId, (), T::AccountId),
+        /// a Call has been executed [dorg, call_hash]
+        CallExecuted(T::AccountId, ()),
+        /// a Call has been removed [dorg, call_hash]
+        CallRemoved(T::AccountId, ()),
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
-		/// Errors should have helpful documentation associated with them.
-		StorageOverflow,
+        /// dorg either have no member or have an invalid treshold (0)
+        InvalidDorg,
+        /// the dorg doesn't exist
+        DorgNotFound,
+        /// the call already exists
+        CallAlreadyExists,
+        /// the call doesn't exist
+        CallNotFound,
+        /// the user is not a member of the dorg
+        NotMember,
+        /// the user already voted for the call
+        AlreadyVoted,
+
 	}
 
 	#[pallet::call]
