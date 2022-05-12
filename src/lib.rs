@@ -13,12 +13,21 @@ mod benchmarking;
 
 pub use frame_support::{
 	dispatch::DispatchResult,
-    traits::Currency,
+    traits::{
+        Currency, tokens::ExistenceRequirement
+    },
+	PalletId,
 };
 
-// pub use sp_runtime::traits::BlakeTwo256;
+pub use sp_core::Hasher;
 
-use codec::{Decode, Encode};
+pub use sp_std::prelude::Vec;
+pub use sp_runtime::traits::{
+    TrailingZeroInput,
+    AccountIdConversion
+};
+pub use codec::{Decode, Encode};
+
 use scale_info::TypeInfo;
 
 pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -27,12 +36,14 @@ pub type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system:
 pub struct Dorg<AccountId> {
     account: AccountId,
     members: Vec<AccountId>,
+    threshold: u32,
 }
 
 #[derive(Clone, Encode, Decode, TypeInfo, Debug)]
 pub struct CallHash {
     call_hash: (),
 }
+
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -52,11 +63,14 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The trait to manage funds
 		type Currency: Currency<Self::AccountId>;
+
+        #[pallet::constant]
+        type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn dorg)]
-	pub type Dorgs<T: Config> = StorageValue<_, Vec<Dorg<T::AccountId>>>;
+	#[pallet::getter(fn dorgs)]
+	pub type Dorgs<T: Config> = StorageValue<_, Vec<Dorg<T::AccountId>>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn votes)]
@@ -115,9 +129,41 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResult {
+		pub fn create_dorg(
+            origin: OriginFor<T>,
+            members: Vec<T::AccountId>,
+            threshold: u32,
+        ) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			Ok(().into())
+            if members.is_empty() || threshold == 0 {
+                return Err(Error::<T>::InvalidDorg.into());
+            };
+
+            let mut dorgs = Self::dorgs();
+            let dorg_id: T::AccountId = T::PalletId::get().into_sub_account(dorgs.len() as u64);
+
+            let minimum_balance = T::Currency::minimum_balance();
+            T::Currency::transfer(
+                &who,
+                &dorg_id,
+                minimum_balance,
+                ExistenceRequirement::AllowDeath
+            )?;
+
+            let dorg = Dorg {
+                account: dorg_id.clone(),
+                members,
+                threshold
+            };
+
+            dorgs.push(dorg);
+            Dorgs::<T>::put(&dorgs);
+
+            Self::deposit_event(
+                Event::<T>::DorgCreated(dorg_id)
+            );
+
+			Ok(())
 		}
 	}
 }
