@@ -1,5 +1,8 @@
 use crate as pallet_dorg;
-use frame_support::{parameter_types, traits::Everything};
+use frame_support::{
+    parameter_types, traits::Everything,
+    PalletId,
+};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -18,7 +21,9 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Dorg: pallet_dorg::{Pallet, Call, Storage, Event<T>},
+		Dorg: pallet_dorg,
+
+        Balances: pallet_balances,
 	}
 );
 
@@ -45,7 +50,7 @@ impl system::Config for Test {
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -54,11 +59,77 @@ impl system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_dorg::Config for Test {
-	type Event = Event;
+pub type Balance = u64;
+
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1_000;
+	pub const MaxLocks: u32 = 50;
+	pub const MaxReserves: u32 = 50;
 }
 
-// Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+impl pallet_balances::Config for Test {
+	type MaxLocks = MaxLocks;
+	type Balance = Balance;
+	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxReserves = MaxReserves;
+	type ReserveIdentifier = [u8; 8];
+}
+
+parameter_types! {
+	pub const DorgPalletId: PalletId = PalletId(*b"id/ddorg");
+}
+
+impl pallet_dorg::Config for Test {
+	type Event = Event;
+    type Currency = Balances;
+
+    type PalletId = DorgPalletId;
+}
+
+/// Mock users AccountId
+pub const ALICE: u64 = 1;
+pub const BOB: u64 = 2;
+pub const CHARLIE: u64 = 3;
+
+pub struct ExtBuilder {
+	caps_endowed_accounts: Vec<(u64, u64)>,
+}
+
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		ExtBuilder {
+			caps_endowed_accounts: vec![
+			(ALICE, 1_000_000),
+			(BOB, 100_000),
+			(CHARLIE, 100_000),
+		],
+		}
+	}
+}
+
+impl ExtBuilder {
+	pub fn balances(mut self, accounts: Vec<(u64, u64)>) -> Self {
+		for account in accounts {
+			self.caps_endowed_accounts.push(account);
+		}
+		self
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		pallet_balances::GenesisConfig::<Test> {
+			balances: self.caps_endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		let mut ext = sp_io::TestExternalities::new(t);
+		ext.execute_with(|| System::set_block_number(1));
+		ext
+	}
 }
