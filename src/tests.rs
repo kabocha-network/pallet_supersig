@@ -81,6 +81,19 @@ fn create_with_0_threshold() {
 	});
 }
 
+#[test]
+fn submit_call() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+        let call = Call::Nothing(NoCall::do_nothing {});
+    })
+}
+
+////////////
+//
+// helper functions
+//
+////////////
+
 fn get_account_id(index: u64) -> <Test as frame_system::Config>::AccountId {
     DorgPalletId::get().into_sub_account(index)
 }

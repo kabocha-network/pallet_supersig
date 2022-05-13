@@ -1,8 +1,5 @@
 use crate as pallet_dorg;
-use frame_support::{
-    parameter_types, traits::Everything,
-    PalletId,
-};
+use frame_support::{parameter_types, traits::Everything, PalletId};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -13,6 +10,40 @@ use sp_runtime::{
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+#[frame_support::pallet]
+pub mod nothing {
+    // use super::*;
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
+
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+	}
+
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
+	pub struct Pallet<T>(PhantomData<T>);
+
+    #[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+        Nothing {}
+	}
+
+    #[pallet::call]
+	impl<T: Config> Pallet<T> {
+	    #[pallet::weight(1000)]
+        pub fn do_nothing(
+			origin: OriginFor<T>,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			Ok(().into())
+		}
+    }
+}
+
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -21,11 +52,16 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Dorg: pallet_dorg,
+		Dorg: pallet_dorg::{Pallet, Call, Storage, Event<T>},
+        Nothing: nothing::{Pallet, Call, Storage, Event<T>},
 
-        Balances: pallet_balances,
+		Balances: pallet_balances,
 	}
 );
+
+impl nothing::Config for Test {
+	type Event = Event;
+}
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -81,14 +117,18 @@ impl pallet_balances::Config for Test {
 
 parameter_types! {
 	pub const DorgPalletId: PalletId = PalletId(*b"id/ddorg");
+	pub const DorgPreimageByteDeposit: Balance = 1000;
 }
 
 impl pallet_dorg::Config for Test {
 	type Event = Event;
-    type Currency = Balances;
-
-    type PalletId = DorgPalletId;
+	type Currency = Balances;
+	type PalletId = DorgPalletId;
+	type Call = Call;
+	type DorgPreimageByteDeposit = DorgPreimageByteDeposit;
 }
+
+pub type NoCall = nothing::Call<Test>;
 
 /// Mock users AccountId
 pub const ALICE: u64 = 1;
@@ -102,11 +142,7 @@ pub struct ExtBuilder {
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		ExtBuilder {
-			caps_endowed_accounts: vec![
-			(ALICE, 1_000_000),
-			(BOB, 100_000),
-			(CHARLIE, 100_000),
-		],
+			caps_endowed_accounts: vec![(ALICE, 1_000_000), (BOB, 100_000), (CHARLIE, 100_000)],
 		}
 	}
 }
@@ -122,11 +158,9 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		pallet_balances::GenesisConfig::<Test> {
-			balances: self.caps_endowed_accounts,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+		pallet_balances::GenesisConfig::<Test> { balances: self.caps_endowed_accounts }
+			.assimilate_storage(&mut t)
+			.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
