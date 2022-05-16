@@ -126,7 +126,7 @@ impl pallet_supersig::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
 	type PalletId = SupersigPalletId;
-	// type Call = Call;
+	type Call = Call;
 	type PreimageByteDeposit = SupersigPreimageByteDeposit;
 }
 

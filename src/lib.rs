@@ -17,12 +17,14 @@ pub use frame_support::{
     weights::{GetDispatchInfo, PostDispatchInfo},
 	PalletId,
 };
-
 pub use sp_core::Hasher;
 
 pub use codec::{Decode, Encode};
 pub use sp_runtime::traits::{AccountIdConversion, Dispatchable, Hash, Saturating};
-pub use sp_std::prelude::Vec;
+pub use sp_std::{
+    prelude::Vec,
+    boxed::Box,
+};
 
 use scale_info::TypeInfo;
 
@@ -155,7 +157,7 @@ pub mod pallet {
 				&who,
 				&supersig_id,
 				minimum_balance,
-				ExistenceRequirement::AllowDeath,
+				ExistenceRequirement::KeepAlive,
 			)?;
 
 			let supersig = Supersig { members, threshold };
@@ -172,7 +174,7 @@ pub mod pallet {
 		pub fn submit_call(
 			origin: OriginFor<T>,
 			supersig_id: T::AccountId,
-			call: <T as pallet::Config>::Call,
+			call: Box<<T as pallet::Config>::Call>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let id = Self::get_index_from_id(&supersig_id).ok_or(Error::<T>::SupersigNotFound)?;
@@ -189,6 +191,49 @@ pub mod pallet {
 
 			let preimage = PreimageCall::<T::AccountId, BalanceOf<T>> {
 				data,
+				provider: who.clone(),
+				deposit,
+			};
+
+            Calls::<T>::insert(nonce, preimage);
+            Self::deposit_event(Event::<T>::CallSubmitted(supersig_id, nonce, who));
+
+            NonceCall::<T>::put(nonce + 1);
+			Ok(())
+		}
+
+        // ^
+        // |
+        // |
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //
+        // DEPENDING ON PERFS, ONLY ONE OF THOSE CALL WILL BE KEPT
+        //
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // |
+        // |
+        // v
+
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn submit_encoded_call(
+			origin: OriginFor<T>,
+			supersig_id: T::AccountId,
+			encoded_call: Vec<u8>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let id = Self::get_index_from_id(&supersig_id).ok_or(Error::<T>::SupersigNotFound)?;
+
+			if !Self::is_user_in_supersig(id, &who) {
+				return Err(Error::<T>::NotMember.into())
+			}
+			let nonce = Self::nonce_call();
+			let deposit = <BalanceOf<T>>::from(encoded_call.len() as u32)
+				.saturating_mul(T::PreimageByteDeposit::get());
+
+            T::Currency::reserve(&who, deposit)?;
+
+			let preimage = PreimageCall::<T::AccountId, BalanceOf<T>> {
+				data: encoded_call,
 				provider: who.clone(),
 				deposit,
 			};

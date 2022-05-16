@@ -2,16 +2,25 @@ use crate::{
     mock::*,
     Error,
     Supersig as SupersigStruct,
+    PreimageCall,
 };
 use frame_support::{
     assert_noop, assert_ok,
 	traits::{tokens::ExistenceRequirement, Currency},
 };
 // use sp_runtime::traits::BadOrigin;
-use sp_runtime::traits::AccountIdConversion;
+use sp_runtime::traits::{AccountIdConversion, Saturating};
+use codec::{Decode, Encode};
+pub use sp_std::boxed::Box;
+
+////////////
+//
+// create_supersig() tests
+//
+////////////
 
 #[test]
-fn create_supersig_call() {
+fn create_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
         let supersig = SupersigStruct {
             members: vec!(ALICE(), BOB(), CHARLIE()),
@@ -27,7 +36,7 @@ fn create_supersig_call() {
 }
 
 #[test]
-fn create_multiple_supersig_call() {
+fn create_multiple_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
         let supersig_1 = SupersigStruct {
             members: vec!(ALICE(), BOB(), CHARLIE()),
@@ -73,10 +82,48 @@ fn create_with_0_threshold() {
 	});
 }
 
+////////////
+//
+// submit_call() tests
+//
+////////////
+
 #[test]
-fn submit_call() {
+fn submit_calls() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 2));
+        let supersig_id = get_account_id(0);
+
         let call = Call::Nothing(NoCall::do_nothing {});
+
+        // let data = call.encode();
+        // let provider = ALICE();
+		// let deposit = Balances::from(data.len() as u32).saturating_mul(Supersig::PreimageByteDeposit::get());
+        // let preimage = PreimageCall {
+        //     data,
+        //     provider,
+        //     deposit,
+        // };
+
+
+        assert_ok!(Supersig::submit_call(Origin::signed(ALICE()), supersig_id.clone(), Box::new(call.clone())));
+        assert_eq!(Supersig::nonce_call(), 1);
+        assert_ok!(Supersig::submit_call(Origin::signed(BOB()), supersig_id.clone(), Box::new(call.clone())));
+        assert_eq!(Supersig::nonce_call(), 2);
+        assert_ok!(Supersig::submit_call(Origin::signed(CHARLIE()), supersig_id, Box::new(call)));
+        assert_eq!(Supersig::nonce_call(), 3);
+        // assert_eq!(Supersig::calls(0).unwrap(), preimage);
+    })
+}
+
+#[test]
+fn not_a_member() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB()), 2));
+        let supersig_id = get_account_id(0);
+
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_noop!(Supersig::submit_call(Origin::signed(CHARLIE()), supersig_id, Box::new(call)), Error::<Test>::NotMember);
     })
 }
 
