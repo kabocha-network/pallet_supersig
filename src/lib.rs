@@ -14,6 +14,7 @@ mod benchmarking;
 pub use frame_support::{
 	dispatch::DispatchResult,
 	traits::{tokens::ExistenceRequirement, Currency, ReservableCurrency},
+    weights::{GetDispatchInfo, PostDispatchInfo},
 	PalletId,
 };
 
@@ -65,7 +66,11 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 		/// The call type
-		type Call: Parameter + Dispatchable<Origin = Self::Origin> + From<Call<Self>>;
+        type Call: Parameter
+			+ Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+			+ GetDispatchInfo
+			+ From<frame_system::Call<Self>>;
+
 		/// The amount of balance that must be deposited per byte of preimage stored.
 		#[pallet::constant]
 		type PreimageByteDeposit: Get<BalanceOf<Self>>;
