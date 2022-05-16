@@ -118,7 +118,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const SupersigPalletId: PalletId = PalletId(*b"id/dsupersig");
+	pub const SupersigPalletId: PalletId = PalletId(*b"id/susig");
 	pub const SupersigPreimageByteDeposit: Balance = 1000;
 }
 
@@ -127,7 +127,7 @@ impl pallet_supersig::Config for Test {
 	type Currency = Balances;
 	type PalletId = SupersigPalletId;
 	// type Call = Call;
-	type SupersigPreimageByteDeposit = SupersigPreimageByteDeposit;
+	type PreimageByteDeposit = SupersigPreimageByteDeposit;
 }
 
 pub type NoCall = nothing::Call<Test>;
@@ -163,19 +163,19 @@ pub fn CHARLIE() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("Charlie")
 }
 pub struct ExtBuilder {
-	caps_endowed_accounts: Vec<(u64, u64)>,
+	caps_endowed_accounts: Vec<(AccountId, u64)>,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		ExtBuilder {
-			caps_endowed_accounts: vec![(ALICE, 1_000_000), (BOB, 100_000), (CHARLIE, 100_000)],
+			caps_endowed_accounts: vec![(ALICE(), 1_000_000), (BOB(), 100_000), (CHARLIE(), 100_000)],
 		}
 	}
 }
 
 impl ExtBuilder {
-	pub fn balances(mut self, accounts: Vec<(u64, u64)>) -> Self {
+	pub fn balances(mut self, accounts: Vec<(AccountId, u64)>) -> Self {
 		for account in accounts {
 			self.caps_endowed_accounts.push(account);
 		}
