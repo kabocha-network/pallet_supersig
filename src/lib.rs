@@ -65,8 +65,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 		/// The call type
-		// type Call: Parameter + Dispatchable<Origin = Self::Origin> + From<Call<Self>>;
-		// /// The amount of balance that must be deposited per byte of preimage stored.
+		type Call: Parameter + Dispatchable<Origin = Self::Origin> + From<Call<Self>>;
+		/// The amount of balance that must be deposited per byte of preimage stored.
 		#[pallet::constant]
 		type PreimageByteDeposit: Get<BalanceOf<Self>>;
 	}
@@ -163,37 +163,37 @@ pub mod pallet {
 			Ok(())
 		}
 
-	// 	#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-	// 	pub fn submit_call(
-	// 		origin: OriginFor<T>,
-	// 		supersig_id: T::AccountId,
-	// 		call: <T as pallet::Config>::Call,
-	// 	) -> DispatchResult {
-	// 		let who = ensure_signed(origin)?;
-	// 		let id = Self::get_index_from_id(&supersig_id).ok_or(Error::<T>::SupersigNotFound)?;
-	//
-	// 		if !Self::is_user_in_supersig(id, &who) {
-	// 			return Err(Error::<T>::NotMember.into())
-	// 		}
-	// 		let nonce = Self::nonce_call();
-	// 		let data = call.encode();
-	// 		let deposit = <BalanceOf<T>>::from(data.len() as u32)
-	// 			.saturating_mul(T::PreimageByteDeposit::get());
-	//
- //            T::Currency::reserve(&who, deposit)?;
-	//
-	// 		let preimage = PreimageCall::<T::AccountId, BalanceOf<T>> {
-	// 			data,
-	// 			provider: who.clone(),
-	// 			deposit,
-	// 		};
-	//
- //            Calls::<T>::insert(nonce, preimage);
- //            Self::deposit_event(Event::<T>::CallSubmitted(supersig_id, nonce, who));
-	//
- //            NonceCall::<T>::put(nonce + 1);
-	// 		Ok(())
-	// 	}
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn submit_call(
+			origin: OriginFor<T>,
+			supersig_id: T::AccountId,
+			call: <T as pallet::Config>::Call,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let id = Self::get_index_from_id(&supersig_id).ok_or(Error::<T>::SupersigNotFound)?;
+
+			if !Self::is_user_in_supersig(id, &who) {
+				return Err(Error::<T>::NotMember.into())
+			}
+			let nonce = Self::nonce_call();
+			let data = call.encode();
+			let deposit = <BalanceOf<T>>::from(data.len() as u32)
+				.saturating_mul(T::PreimageByteDeposit::get());
+
+            T::Currency::reserve(&who, deposit)?;
+
+			let preimage = PreimageCall::<T::AccountId, BalanceOf<T>> {
+				data,
+				provider: who.clone(),
+				deposit,
+			};
+
+            Calls::<T>::insert(nonce, preimage);
+            Self::deposit_event(Event::<T>::CallSubmitted(supersig_id, nonce, who));
+
+            NonceCall::<T>::put(nonce + 1);
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
