@@ -135,6 +135,8 @@ pub mod pallet {
 		NotMember,
 		/// the user already voted for the call
 		AlreadyVoted,
+        /// the signatory is not the supersig.
+        NotAllowed
 	}
 
 	#[pallet::call]
@@ -275,6 +277,23 @@ pub mod pallet {
 
             Ok(())
         }
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		pub fn remove_call(
+			origin: OriginFor<T>,
+			supersig_id: T::AccountId,
+			call_index: CallIndex,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+            if who != supersig_id {
+                return Err(Error::<T>::NotAllowed.into());
+            }
+            if let Some(id) = Self::get_supersig_index_from_id(&supersig_id) {
+                Self::unchecked_remove_call(id, call_index);
+                Ok(())
+            } else {
+                Err(Error::<T>::SupersigNotFound.into())
+            }
+        }
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -302,11 +321,11 @@ pub mod pallet {
                     .map(|_| ())
 					.map_err(|e| e.error);
                 Self::deposit_event(Event::<T>::CallExecuted(supersig_id, call_index, res));
-                Self::remove_call(supersig_index, call_index);
+                Self::unchecked_remove_call(supersig_index, call_index);
             }
         }
 
-        pub fn remove_call(supersig_index: u128, call_index: u128) {
+        pub fn unchecked_remove_call(supersig_index: u128, call_index: u128) {
             Calls::<T>::remove(supersig_index, call_index);
             Votes::<T>::remove(supersig_index, call_index);
             UsersVotes::<T>::remove_prefix((supersig_index, call_index), None);
