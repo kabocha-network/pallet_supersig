@@ -1,3 +1,34 @@
+//! # Supersig Pallet
+//!
+//! The supersig pallet is a multisig with super powers.
+//! It allows you to add and remove members of the multisig.
+//! It extends the capabilities of a multisig so it can be fit for governance of larger funds.
+//!
+//! A multisig transaction acts more like a funding proposal.
+//! And the signatures become votes, with a quorum that can be changed
+//!
+//! Good to know: the multisig addresses won’t change even though the members can be added or removed.
+//!
+//! ## Overview
+//!
+//! The MintWithFee pallet provide function for:
+//!
+//! - Minting tokens with an optional fee.
+//! - Changing the percentage of the fee.
+//!
+//! ## Interface
+//!
+//! ### Dispatchable Functions
+//!
+//! - `set_fee` - Set the fee percentage.
+//! - `mint` - Mint tokens with an optional fee.
+//!
+//! ## GenesisConfig
+//!
+//! The MintWithFee pallet requires a `GenesisConfig` to be set containing:
+//!
+//! - `fee_percent` - The percentage of the total amount of tokens minted that will be used as a fee.
+//!
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -55,7 +86,6 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
@@ -83,6 +113,7 @@ pub mod pallet {
 	pub type NonceSupersig<T: Config> = StorageValue<_, SigIndex, ValueQuery>;
 
 	#[pallet::storage]
+    #[pallet::unbounded]
 	#[pallet::getter(fn supersigs)]
 	pub type Supersigs<T: Config> =
 		StorageMap<_, Blake2_256, SigIndex, Supersig<T::AccountId>, OptionQuery>;
@@ -92,6 +123,7 @@ pub mod pallet {
 	pub type NonceCall<T: Config> = StorageMap<_, Blake2_256, SigIndex, CallIndex, ValueQuery>;
 
 	#[pallet::storage]
+    #[pallet::unbounded]
 	#[pallet::getter(fn calls)]
 	pub type Calls<T: Config> =
 		StorageDoubleMap<_, Blake2_256, SigIndex, Blake2_256, CallIndex, PreimageCall<T::AccountId, BalanceOf<T>>, OptionQuery>;
