@@ -107,23 +107,160 @@ fn submit_calls() {
 
 
         assert_ok!(Supersig::submit_call(Origin::signed(ALICE()), supersig_id.clone(), Box::new(call.clone())));
-        assert_eq!(Supersig::nonce_call(), 1);
+        assert_eq!(Supersig::nonce_call(0), 1);
         assert_ok!(Supersig::submit_call(Origin::signed(BOB()), supersig_id.clone(), Box::new(call.clone())));
-        assert_eq!(Supersig::nonce_call(), 2);
+        assert_eq!(Supersig::nonce_call(0), 2);
         assert_ok!(Supersig::submit_call(Origin::signed(CHARLIE()), supersig_id, Box::new(call)));
-        assert_eq!(Supersig::nonce_call(), 3);
+        assert_eq!(Supersig::nonce_call(0), 3);
         // assert_eq!(Supersig::calls(0).unwrap(), preimage);
+    })
+}
+#[test]
+fn submit_supersig_doesnt_exist() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB()), 2));
+        let bad_supersig_id = get_account_id(1);
+
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_noop!(Supersig::submit_call(Origin::signed(CHARLIE()), bad_supersig_id, Box::new(call)), Error::<Test>::SupersigNotFound);
     })
 }
 
 #[test]
-fn not_a_member() {
+fn submit_not_a_member() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB()), 2));
         let supersig_id = get_account_id(0);
 
         let call = Call::Nothing(NoCall::do_nothing {});
         assert_noop!(Supersig::submit_call(Origin::signed(CHARLIE()), supersig_id, Box::new(call)), Error::<Test>::NotMember);
+    })
+}
+
+////////////
+//
+// approve_call() tests
+//
+////////////
+
+#[test]
+fn approve_call() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 3));
+        let supersig_id = get_account_id(0);
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_ok!(Supersig::submit_call(Origin::signed(ALICE()), supersig_id.clone(), Box::new(call.clone())));
+
+        assert_ok!(Supersig::approve_call(Origin::signed(ALICE()), supersig_id.clone(), 0));
+        assert_eq!(Supersig::votes(0, 0), 1);
+        assert_eq!(Supersig::users_votes((0, 0), ALICE()), true);
+
+        assert_ok!(Supersig::approve_call(Origin::signed(CHARLIE()), supersig_id, 0));
+        assert_eq!(Supersig::votes(0, 0), 2);
+        assert_eq!(Supersig::users_votes((0, 0), CHARLIE()), true);
+        assert_eq!(Supersig::users_votes((0, 0), BOB()), false);
+    })
+}
+
+#[test]
+fn approve_call_until_threshold() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 2));
+        let supersig_id = get_account_id(0);
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_ok!(Supersig::submit_call(Origin::signed(ALICE()), supersig_id.clone(), Box::new(call.clone())));
+
+        assert_ok!(Supersig::approve_call(Origin::signed(ALICE()), supersig_id.clone(), 0));
+        assert_ok!(Supersig::approve_call(Origin::signed(BOB()), supersig_id, 0));
+
+        assert_eq!(Supersig::votes(0, 0), 2);
+        assert_eq!(Supersig::users_votes((0, 0), ALICE()), true);
+        assert_eq!(Supersig::users_votes((0, 0), BOB()), true);
+        assert_eq!(Supersig::users_votes((0, 0), CHARLIE()), false);
+
+        assert_eq!(Supersig::calls(0, 0).is_none(), true);
+        assert_eq!(Balances::reserved_balance(ALICE()), 0);
+    })
+}
+
+#[test]
+fn approve_supersig_doesnt_exist() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 2));
+        let supersig_id = get_account_id(0);
+
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_ok!(Supersig::submit_call(Origin::signed(CHARLIE()), supersig_id.clone(), Box::new(call)));
+        assert_noop!(Supersig::approve_call(Origin::signed(CHARLIE()), get_account_id(3), 0), Error::<Test>::SupersigNotFound);
+    })
+}
+
+#[test]
+fn user_already_voted() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 2));
+        let supersig_id = get_account_id(0);
+
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_ok!(Supersig::submit_call(Origin::signed(CHARLIE()), supersig_id.clone(), Box::new(call)));
+        assert_ok!(Supersig::approve_call(Origin::signed(CHARLIE()), supersig_id.clone(), 0));
+        assert_noop!(Supersig::approve_call(Origin::signed(CHARLIE()), supersig_id, 0), Error::<Test>::AlreadyVoted);
+    })
+}
+
+#[test]
+fn approve_not_a_member() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB()), 2));
+        let supersig_id = get_account_id(0);
+
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_ok!(Supersig::submit_call(Origin::signed(ALICE()), supersig_id.clone(), Box::new(call)));
+        assert_noop!(Supersig::approve_call(Origin::signed(CHARLIE()), supersig_id, 0), Error::<Test>::NotMember);
+    })
+}
+
+////////////
+//
+// remove_call() tests
+//
+////////////
+
+#[test]
+fn remove_call() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB()), 2));
+        let supersig_id = get_account_id(0);
+
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_ok!(Supersig::submit_call(Origin::signed(ALICE()), supersig_id.clone(), Box::new(call)));
+        assert_eq!(Supersig::calls(0, 0).is_some(), true);
+        assert_ok!(Supersig::remove_call(Origin::signed(supersig_id.clone()), supersig_id.clone(), 0));
+        assert_eq!(Supersig::calls(0, 0).is_none(), true);
+    })
+}
+
+#[test]
+fn non_allowed_remove_call() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB()), 2));
+        let supersig_id = get_account_id(0);
+
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_ok!(Supersig::submit_call(Origin::signed(ALICE()), supersig_id.clone(), Box::new(call)));
+        assert_noop!(Supersig::remove_call(Origin::signed(ALICE()), supersig_id.clone(), 0), Error::<Test>::NotAllowed);
+    })
+}
+
+#[test]
+fn remove_unknown_call() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB()), 2));
+        let supersig_id = get_account_id(0);
+
+        let call = Call::Nothing(NoCall::do_nothing {});
+        assert_ok!(Supersig::submit_call(Origin::signed(ALICE()), supersig_id.clone(), Box::new(call)));
+        assert_noop!(Supersig::remove_call(Origin::signed(supersig_id.clone()), supersig_id, 1), Error::<Test>::CallNotFound);
     })
 }
 

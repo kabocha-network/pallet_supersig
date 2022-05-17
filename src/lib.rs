@@ -262,6 +262,9 @@ pub mod pallet {
             if Self::users_votes((sindex, call_index), who.clone()) {
                 return Err(Error::<T>::AlreadyVoted.into())
             }
+            if Self::calls(sindex, call_index).is_none() {
+                return Err(Error::<T>::CallNotFound.into())
+            }
 
             UsersVotes::<T>::insert((sindex, call_index), who.clone(), true);
             Votes::<T>::insert(sindex, call_index, Self::votes(sindex, call_index) + 1);
@@ -284,23 +287,32 @@ pub mod pallet {
 			call_index: CallIndex,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			let sindex = Self::get_supersig_index_from_id(&supersig_id).ok_or(Error::<T>::SupersigNotFound)?;
             if who != supersig_id {
                 return Err(Error::<T>::NotAllowed.into());
             }
-            if let Some(id) = Self::get_supersig_index_from_id(&supersig_id) {
-                Self::unchecked_remove_call(id, call_index);
-                Ok(())
-            } else {
-                Err(Error::<T>::SupersigNotFound.into())
+            if Self::calls(sindex, call_index).is_none() {
+                return Err(Error::<T>::CallNotFound.into())
             }
+            Self::unchecked_remove_call(sindex, call_index);
+            Ok(())
         }
 	}
 
 	impl<T: Config> Pallet<T> {
 		pub fn get_supersig_index_from_id(id: &T::AccountId) -> Option<u128> {
-			PalletId::try_from_sub_account(id).map(|(_, index)| index)
+			let res = PalletId::try_from_sub_account(id).map(|(_, index)| index);
+            if let Some(index) = res {
+                if index < Self::nonce_supersig() {
+                    return Some(index)
+                } else {
+                    return None
+                }
+            } else {
+                None
+            }
 		}
-		pub fn get_supersig_id_from_index(index: u128) -> Option<T::AccountId> {
+		pub fn get_supersig_id_from_index(index: u128) -> T::AccountId {
             T::PalletId::get().into_sub_account(index)
 		}
 		pub fn is_user_in_supersig(supersig_id: u128, user: &T::AccountId) -> bool {
@@ -312,7 +324,7 @@ pub mod pallet {
 
         pub fn execute_call(supersig_index: u128, call_index: u128) {
             let preimage = Self::calls(supersig_index, call_index).unwrap();
-            let supersig_id = Self::get_supersig_id_from_index(supersig_index).unwrap();
+            let supersig_id = Self::get_supersig_id_from_index(supersig_index);
             if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..]) {
 
                 T::Currency::unreserve(&preimage.provider, preimage.deposit);
@@ -327,8 +339,8 @@ pub mod pallet {
 
         pub fn unchecked_remove_call(supersig_index: u128, call_index: u128) {
             Calls::<T>::remove(supersig_index, call_index);
-            Votes::<T>::remove(supersig_index, call_index);
-            UsersVotes::<T>::remove_prefix((supersig_index, call_index), None);
+            // Votes::<T>::remove(supersig_index, call_index);
+            // UsersVotes::<T>::remove_prefix((supersig_index, call_index), None);
         }
 	}
 }
