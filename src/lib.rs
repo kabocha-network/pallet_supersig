@@ -11,24 +11,25 @@
 //!
 //! ## Overview
 //!
-//! The MintWithFee pallet provide function for:
+//! The Supersig pallet provide function for:
 //!
-//! - Minting tokens with an optional fee.
-//! - Changing the percentage of the fee.
+//! - Creating a supersig
+//! - Submit proposal to a supersig
+//! - Vote the proposal
+//! - Remove a current proposal
 //!
-//! ## Interface
 //!
 //! ### Dispatchable Functions
 //!
-//! - `set_fee` - Set the fee percentage.
-//! - `mint` - Mint tokens with an optional fee.
+//! - `create_supersig` - create a supersig, with specified members and threshold
+//!     -> note of caution: the creator of the supersig will NOT be added by default, he have to
+//!     pass his adress into the list of users.
+//! - `submit_call` - make a proposal on the specified supersig
+//! - `approve_call` - give a positive vote to a call. if the number of vote = threshold, the call
+//! is executed
+//! - `remove_call` - remove a call from the poll
 //!
-//! ## GenesisConfig
-//!
-//! The MintWithFee pallet requires a `GenesisConfig` to be set containing:
-//!
-//! - `fee_percent` - The percentage of the total amount of tokens minted that will be used as a fee.
-//!
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -50,33 +51,14 @@ pub use frame_support::{
 };
 pub use sp_core::Hasher;
 
-pub use codec::{Decode, Encode};
 pub use sp_runtime::traits::{AccountIdConversion, Dispatchable, Hash, Saturating};
 pub use sp_std::{
     prelude::Vec,
     boxed::Box,
 };
 
-use scale_info::TypeInfo;
-
-pub type BalanceOf<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
-#[derive(Clone, Encode, Decode, TypeInfo, Debug, PartialEq, Eq)]
-pub struct Supersig<AccountId> {
-	members: Vec<AccountId>,
-	threshold: u128,
-}
-
-#[derive(Clone, Encode, Decode, TypeInfo, Debug)]
-pub struct PreimageCall<AccountId, Balance> {
-	data: Vec<u8>,
-	provider: AccountId,
-	deposit: Balance,
-}
-
-pub type SigIndex = u128;
-pub type CallIndex = u128;
+pub mod types;
+pub use types::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -144,13 +126,13 @@ pub mod pallet {
 		/// Supersig has been created [supersig]
 		SupersigCreated(T::AccountId),
 		/// a Call has been submited [supersig, call_nonce, submiter]
-		CallSubmitted(T::AccountId, u128, T::AccountId),
+		CallSubmitted(T::AccountId, CallIndex, T::AccountId),
 		/// a Call has been voted [supersig, call_nonce, voter]
-		CallVoted(T::AccountId, u128, T::AccountId),
+		CallVoted(T::AccountId, CallIndex, T::AccountId),
 		/// a Call has been executed [supersig, call_nonce, result]
-		CallExecuted(T::AccountId, u128, DispatchResult),
+		CallExecuted(T::AccountId, CallIndex, DispatchResult),
 		/// a Call has been removed [supersig, call_nonce]
-		CallRemoved(T::AccountId, u128),
+		CallRemoved(T::AccountId, CallIndex),
 	}
 
 	#[pallet::error]
@@ -180,9 +162,7 @@ pub mod pallet {
 			threshold: u128,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			if members.is_empty() || threshold == 0 {
-				return Err(Error::<T>::InvalidSupersig.into())
-			};
+            let supersig = Supersig::new(members, threshold).ok_or(Error::<T>::InvalidSupersig)?;
 			let index = Self::nonce_supersig();
 			let supersig_id: T::AccountId = T::PalletId::get().into_sub_account(index);
 
@@ -194,7 +174,7 @@ pub mod pallet {
 				ExistenceRequirement::KeepAlive,
 			)?;
 
-			let supersig = Supersig { members, threshold };
+			// let supersig = Supersig { members, threshold };
 
 			Supersigs::<T>::insert(index, supersig);
 			NonceSupersig::<T>::put(index + 1);
@@ -218,6 +198,7 @@ pub mod pallet {
 			}
 			let nonce = Self::nonce_call(sindex);
 			let data = call.encode();
+            // let len = if data.len()
 			let deposit = <BalanceOf<T>>::from(data.len() as u32)
 				.saturating_mul(T::PreimageByteDeposit::get());
 
@@ -291,18 +272,21 @@ pub mod pallet {
 			if !Self::is_user_in_supersig(sindex, &who) {
 				return Err(Error::<T>::NotMember.into())
 			}
-            if Self::users_votes((sindex, call_index), who.clone()) {
-                return Err(Error::<T>::AlreadyVoted.into())
-            }
             if Self::calls(sindex, call_index).is_none() {
                 return Err(Error::<T>::CallNotFound.into())
             }
+            if Self::users_votes((sindex, call_index), who.clone()) {
+                return Err(Error::<T>::AlreadyVoted.into())
+            }
 
             UsersVotes::<T>::insert((sindex, call_index), who.clone(), true);
-            Votes::<T>::insert(sindex, call_index, Self::votes(sindex, call_index) + 1);
+            Votes::<T>::mutate(sindex, call_index, |val| {
+                *val += 1
+            });
 
             Self::deposit_event(Event::<T>::CallVoted(supersig_id, call_index, who));
 
+            // cannot fail, as the supersig referenced by sindex exist (checked in get_supersig_index_from_id)
             let threshold = Self::supersigs(sindex).unwrap().threshold;
             let total_votes = Self::votes(sindex, call_index);
 
@@ -320,21 +304,23 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let sindex = Self::get_supersig_index_from_id(&supersig_id).ok_or(Error::<T>::SupersigNotFound)?;
-            if who != supersig_id {
+            let preimage = Self::calls(sindex, call_index).ok_or(Error::<T>::CallNotFound)?;
+            if who != supersig_id && who != preimage.provider {
                 return Err(Error::<T>::NotAllowed.into());
             }
-            if Self::calls(sindex, call_index).is_none() {
-                return Err(Error::<T>::CallNotFound.into())
-            }
             Self::unchecked_remove_call(sindex, call_index);
+            Self::deposit_event(Event::<T>::CallRemoved(supersig_id, call_index));
+            T::Currency::unreserve(&preimage.provider, preimage.deposit);
             Ok(())
         }
 	}
 
 	impl<T: Config> Pallet<T> {
 		pub fn get_supersig_index_from_id(id: &T::AccountId) -> Option<u128> {
-			let res = PalletId::try_from_sub_account(id).map(|(_, index)| index);
-            if let Some(index) = res {
+            if let Some((account, index)) = PalletId::try_from_sub_account(id) {
+                if account != T::PalletId::get() {
+                    return None
+                }
                 if index < Self::nonce_supersig() {
                     return Some(index)
                 } else {
@@ -355,24 +341,23 @@ pub mod pallet {
 		}
 
         pub fn execute_call(supersig_index: u128, call_index: u128) {
-            let preimage = Self::calls(supersig_index, call_index).unwrap();
-            let supersig_id = Self::get_supersig_id_from_index(supersig_index);
-            if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..]) {
+            if let Some(preimage) = Self::calls(supersig_index, call_index) {
+                let supersig_id = Self::get_supersig_id_from_index(supersig_index);
+                if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..]) {
 
-                T::Currency::unreserve(&preimage.provider, preimage.deposit);
+                    T::Currency::unreserve(&preimage.provider, preimage.deposit);
 
-                let res = call.dispatch(frame_system::RawOrigin::Signed(supersig_id.clone()).into())
-                    .map(|_| ())
-					.map_err(|e| e.error);
-                Self::deposit_event(Event::<T>::CallExecuted(supersig_id, call_index, res));
-                Self::unchecked_remove_call(supersig_index, call_index);
+                    let res = call.dispatch(frame_system::RawOrigin::Signed(supersig_id.clone()).into())
+                        .map(|_| ())
+                        .map_err(|e| e.error);
+                    Self::deposit_event(Event::<T>::CallExecuted(supersig_id, call_index, res));
+                    Self::unchecked_remove_call(supersig_index, call_index);
+                }
             }
         }
 
         pub fn unchecked_remove_call(supersig_index: u128, call_index: u128) {
             Calls::<T>::remove(supersig_index, call_index);
-            // Votes::<T>::remove(supersig_index, call_index);
-            // UsersVotes::<T>::remove_prefix((supersig_index, call_index), None);
         }
 	}
 }

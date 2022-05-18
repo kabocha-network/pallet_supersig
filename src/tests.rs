@@ -44,13 +44,13 @@ fn create_multiple_supersig() {
         };
         let supersig_2 = SupersigStruct {
             members: vec!(ALICE(), BOB()),
-            threshold: 5
+            threshold: 2
         };
 
         assert_eq!(Supersig::nonce_supersig(), 0);
 		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 2));
         assert_eq!(Supersig::nonce_supersig(), 1);
-		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB()), 5));
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB()), 2));
         assert_eq!(Supersig::nonce_supersig(), 2);
 
 		assert_eq!(Balances::free_balance(get_account_id(0)), Balances::minimum_balance());
@@ -76,9 +76,10 @@ fn create_with_empty_list() {
 }
 
 #[test]
-fn create_with_0_threshold() {
+fn create_with_bad_threshold() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_noop!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 0), Error::<Test>::InvalidSupersig);
+		assert_noop!(Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 5), Error::<Test>::InvalidSupersig);
 	});
 }
 
@@ -248,7 +249,7 @@ fn non_allowed_remove_call() {
 
         let call = Call::Nothing(NoCall::do_nothing {});
         assert_ok!(Supersig::submit_call(Origin::signed(ALICE()), supersig_id.clone(), Box::new(call)));
-        assert_noop!(Supersig::remove_call(Origin::signed(ALICE()), supersig_id.clone(), 0), Error::<Test>::NotAllowed);
+        assert_noop!(Supersig::remove_call(Origin::signed(BOB()), supersig_id.clone(), 0), Error::<Test>::NotAllowed);
     })
 }
 
