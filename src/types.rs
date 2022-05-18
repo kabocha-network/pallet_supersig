@@ -1,9 +1,9 @@
 use crate::*;
-use scale_info::TypeInfo;
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 
 pub type BalanceOf<T> =
-    <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[derive(Clone, Encode, Decode, TypeInfo, Debug, PartialEq, Eq)]
 pub struct Supersig<AccountId> {
@@ -12,15 +12,12 @@ pub struct Supersig<AccountId> {
 }
 
 impl<AccountId> Supersig<AccountId> {
-    pub fn new(members: Vec<AccountId>, threshold: u128) -> Option<Self> {
-        if members.is_empty() || threshold == 0 || threshold as usize > members.len() {
-            return None
-        }
-        Some(Self {
-            members,
-            threshold
-        })
-    }
+	pub fn new(members: Vec<AccountId>, threshold: u128) -> Option<Self> {
+		if members.is_empty() || threshold == 0 || threshold as usize > members.len() {
+			return None
+		}
+		Some(Self { members, threshold })
+	}
 }
 
 #[derive(Clone, Encode, Decode, TypeInfo, Debug)]
