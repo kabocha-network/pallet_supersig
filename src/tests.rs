@@ -1,8 +1,5 @@
 use crate::{mock::*, Error, Supersig as SupersigStruct};
-use frame_support::{
-	assert_noop, assert_ok,
-	traits::Currency
-};
+use frame_support::{assert_noop, assert_ok, traits::Currency};
 use sp_runtime::traits::AccountIdConversion;
 pub use sp_std::boxed::Box;
 
