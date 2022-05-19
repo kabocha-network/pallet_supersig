@@ -14,13 +14,11 @@ fn create_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		let supersig = SupersigStruct {
 			members: vec![ALICE(), BOB(), CHARLIE()],
-			threshold: 2,
 		};
 
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			2
+			vec!(ALICE(), BOB(), CHARLIE())
 		));
 
 		assert_eq!(
@@ -37,24 +35,20 @@ fn create_multiple_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		let supersig_1 = SupersigStruct {
 			members: vec![ALICE(), BOB(), CHARLIE()],
-			threshold: 2,
 		};
 		let supersig_2 = SupersigStruct {
 			members: vec![ALICE(), BOB()],
-			threshold: 2,
 		};
 
 		assert_eq!(Supersig::nonce_supersig(), 0);
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
-			2
 		));
 		assert_eq!(Supersig::nonce_supersig(), 1);
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
-			2
 		));
 		assert_eq!(Supersig::nonce_supersig(), 2);
 
@@ -85,7 +79,7 @@ fn create_multiple_supersig() {
 fn create_with_empty_list() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_noop!(
-			Supersig::create_supersig(Origin::signed(ALICE()), vec!(), 2),
+			Supersig::create_supersig(Origin::signed(ALICE()), vec!()),
 			Error::<Test>::InvalidSupersig
 		);
 	});
@@ -95,11 +89,11 @@ fn create_with_empty_list() {
 fn create_with_bad_threshold() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_noop!(
-			Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 0),
+			Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE())),
 			Error::<Test>::InvalidSupersig
 		);
 		assert_noop!(
-			Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE()), 5),
+			Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE())),
 			Error::<Test>::InvalidSupersig
 		);
 	});
@@ -117,20 +111,10 @@ fn submit_calls() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
-			2
 		));
 		let supersig_id = get_account_id(0);
 
 		let call = Call::Nothing(NoCall::do_nothing {});
-
-		// let data = call.encode();
-		// let provider = ALICE();
-		// let deposit = Balances::from(data.len() as
-		// u32).saturating_mul(Supersig::PreimageByteDeposit::get()); let preimage = PreimageCall {
-		//     data,
-		//     provider,
-		//     deposit,
-		// };
 
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
@@ -150,7 +134,6 @@ fn submit_calls() {
 			Box::new(call)
 		));
 		assert_eq!(Supersig::nonce_call(0), 3);
-		// assert_eq!(Supersig::calls(0).unwrap(), preimage);
 	})
 }
 #[test]
@@ -159,7 +142,6 @@ fn submit_supersig_doesnt_exist() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
-			2
 		));
 		let bad_supersig_id = get_account_id(1);
 
@@ -177,7 +159,6 @@ fn submit_not_a_member() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
-			2
 		));
 		let supersig_id = get_account_id(0);
 
@@ -201,7 +182,6 @@ fn approve_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
-			3
 		));
 		let supersig_id = get_account_id(0);
 		let call = Call::Nothing(NoCall::do_nothing {});
@@ -236,7 +216,6 @@ fn approve_call_until_threshold() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
-			2
 		));
 		let supersig_id = get_account_id(0);
 		let call = Call::Nothing(NoCall::do_nothing {});
@@ -273,7 +252,6 @@ fn approve_supersig_doesnt_exist() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
-			2
 		));
 		let supersig_id = get_account_id(0);
 
@@ -296,7 +274,6 @@ fn user_already_voted() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
-			2
 		));
 		let supersig_id = get_account_id(0);
 
@@ -324,7 +301,6 @@ fn approve_not_a_member() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
-			2
 		));
 		let supersig_id = get_account_id(0);
 
@@ -353,7 +329,6 @@ fn remove_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
-			2
 		));
 		let supersig_id = get_account_id(0);
 
@@ -379,7 +354,6 @@ fn non_allowed_remove_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
-			2
 		));
 		let supersig_id = get_account_id(0);
 
@@ -402,7 +376,6 @@ fn remove_unknown_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
-			2
 		));
 		let supersig_id = get_account_id(0);
 

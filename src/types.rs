@@ -8,15 +8,14 @@ pub type BalanceOf<T> =
 #[derive(Clone, Encode, Decode, TypeInfo, Debug, PartialEq, Eq)]
 pub struct Supersig<AccountId> {
 	pub members: Vec<AccountId>,
-	pub threshold: u128,
 }
 
 impl<AccountId> Supersig<AccountId> {
-	pub fn new(members: Vec<AccountId>, threshold: u128) -> Option<Self> {
-		if members.is_empty() || threshold == 0 || threshold as usize > members.len() {
+	pub fn new(members: Vec<AccountId>) -> Option<Self> {
+		if members.is_empty() {
 			return None
 		}
-		Some(Self { members, threshold })
+		Some(Self { members })
 	}
 }
 

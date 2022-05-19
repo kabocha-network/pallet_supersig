@@ -29,7 +29,7 @@ benchmarks! {
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(10000u32.into()));
 
 
-	}: _(RawOrigin::Signed(alice.clone()), vec!(alice.clone(), bob, charlie), 2)
+	}: _(RawOrigin::Signed(alice.clone()), vec!(alice.clone(), bob, charlie))
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
 	}
@@ -47,7 +47,7 @@ benchmarks! {
 
 		let supersig_id = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
 
-		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice.clone(), bob, charlie), 2));
+		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice.clone(), bob, charlie)));
 	}: _(RawOrigin::Signed(alice.clone()), supersig_id, Box::new(call))
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
@@ -66,7 +66,7 @@ benchmarks! {
 
 		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
 
-		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice.clone(), bob, charlie), 2));
+		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice.clone(), bob, charlie)));
 		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
 	}: _(RawOrigin::Signed(alice.clone()), supersig_id, 0)
 	verify {
@@ -89,7 +89,7 @@ benchmarks! {
 
 		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
 
-		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice.clone(), bob, charlie), 2));
+		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice.clone(), bob, charlie)));
 		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
 		assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), 0));
 	}: _(RawOrigin::Signed(alice.clone()), supersig_id, 0)

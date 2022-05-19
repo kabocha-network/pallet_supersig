@@ -22,11 +22,12 @@
 //!
 //! ### Dispatchable Functions
 //!
-//! - `create_supersig` - create a supersig, with specified members and threshold -> note of
-//!   caution: the creator of the supersig will NOT be added by default, he have to pass his adress
-//!   into the list of users.
+//! - `create_supersig` - create a supersig, with specified members -> note of caution: the creator
+//!   of the supersig will NOT be added by default, he have to pass his adress into the list of
+//!   users.
 //! - `submit_call` - make a proposal on the specified supersig
-//! - `approve_call` - give a positive vote to a call. if the number of vote = threshold, the call
+//! - `approve_call` - give a positive vote to a call. if the number of vote >= SimpleMajority, the
+//!   call
 //! is executed
 //! - `remove_call` - remove a call from the poll
 
@@ -171,26 +172,22 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-        /// create a supersig.
-        ///
-        /// `create_supersig` will create a supersig with specified parameters, and transfer an
-        /// existencial deposit from the creator to the generated supersig account, to bring the
-        /// account to life.
-        ///
-        /// The dispatch origin for this call must be `Signed`.
-        ///
-        /// # <weight>
-        ///
-        /// Related functions:
-        /// - `Currency::transfer` will be called once to deposit an existencial amount on supersig
+		/// create a supersig.
+		///
+		/// `create_supersig` will create a supersig with specified parameters, and transfer an
+		/// existencial deposit from the creator to the generated supersig account, to bring the
+		/// account to life.
+		///
+		/// The dispatch origin for this call must be `Signed`.
+		///
+		/// # <weight>
+		///
+		/// Related functions:
+		/// - `Currency::transfer` will be called once to deposit an existencial amount on supersig
 		#[pallet::weight(T::WeightInfo::create_supersig())]
-		pub fn create_supersig(
-			origin: OriginFor<T>,
-			members: Vec<T::AccountId>,
-			threshold: u128,
-		) -> DispatchResult {
+		pub fn create_supersig(origin: OriginFor<T>, members: Vec<T::AccountId>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let supersig = Supersig::new(members, threshold).ok_or(Error::<T>::InvalidSupersig)?;
+			let supersig = Supersig::new(members).ok_or(Error::<T>::InvalidSupersig)?;
 			let index = Self::nonce_supersig();
 			let supersig_id: T::AccountId = T::PalletId::get().into_sub_account(index);
 
@@ -210,18 +207,18 @@ pub mod pallet {
 			Ok(())
 		}
 
-        /// submit a call to a specific supersig.
-        ///
-        /// `submit_call` will create a proposal on the supersig, that members can approve.
-        /// this will lock an amount that depend on the lenght of the encoded call, to prevent spam
-        ///
-        /// The dispatch origin for this call must be `Signed`, and the origin must be a
-        /// supersig's member
-        ///
-        /// # <weight>
-        ///
-        /// Related functions:
-        /// - `Currency::reserve` will be called once to lock the deposit amount
+		/// submit a call to a specific supersig.
+		///
+		/// `submit_call` will create a proposal on the supersig, that members can approve.
+		/// this will lock an amount that depend on the lenght of the encoded call, to prevent spam
+		///
+		/// The dispatch origin for this call must be `Signed`, and the origin must be a
+		/// supersig's member
+		///
+		/// # <weight>
+		///
+		/// Related functions:
+		/// - `Currency::reserve` will be called once to lock the deposit amount
 		#[pallet::weight(T::WeightInfo::submit_call(call.encode().len() as u32))]
 		pub fn submit_call(
 			origin: OriginFor<T>,
@@ -255,19 +252,19 @@ pub mod pallet {
 			Ok(())
 		}
 
-        /// vote for a call in the supersig
-        ///
-        /// `approve_call` will add a positive, unique vote to the specified call proposal.
-        /// if the numbers of votes on this proposal = SimpleMajority (51%), then the call is
-        /// executed
-        ///
-        /// The dispatch origin for this call must be `Signed`, and the origin must be a
-        /// supersig's member
-        ///
-        /// # <weight>
-        ///
-        /// Related functions:
-        /// - `Currency::unreserve` will be called once IF SimpleMajority is reached
+		/// vote for a call in the supersig
+		///
+		/// `approve_call` will add a positive, unique vote to the specified call proposal.
+		/// if the numbers of votes on this proposal = SimpleMajority (51%), then the call is
+		/// executed
+		///
+		/// The dispatch origin for this call must be `Signed`, and the origin must be a
+		/// supersig's member
+		///
+		/// # <weight>
+		///
+		/// Related functions:
+		/// - `Currency::unreserve` will be called once IF SimpleMajority is reached
 		#[pallet::weight(T::WeightInfo::approve_call())]
 		pub fn approve_call(
 			origin: OriginFor<T>,
@@ -295,28 +292,28 @@ pub mod pallet {
 
 			// cannot fail, as the supersig referenced by sindex exist (checked in
 			// get_supersig_index_from_id)
-			let threshold = Self::supersigs(sindex).unwrap().threshold;
+			let supersig = Self::supersigs(sindex).unwrap();
 			let total_votes = Self::votes(sindex, call_index);
 
-			if total_votes >= threshold {
+			if total_votes >= supersig.members.len() as u128 {
 				Self::execute_call(sindex, call_index);
 			}
 
 			Ok(())
 		}
 
-        /// remove a call from the supersig
-        ///
-        /// `remove_call` will remove a call from the poll. For trensparency reason, the votes
-        /// wont be removed. This will aslo unlock deposited funds
-        ///
-        /// The dispatch origin for this call must be `Signed` by either the supersig or the
-        /// account who submited the call
-        ///
-        /// # <weight>
-        ///
-        /// Related functions:
-        /// - `Currency::unreserve` will be called once
+		/// remove a call from the supersig
+		///
+		/// `remove_call` will remove a call from the poll. For trensparency reason, the votes
+		/// wont be removed. This will aslo unlock deposited funds
+		///
+		/// The dispatch origin for this call must be `Signed` by either the supersig or the
+		/// account who submited the call
+		///
+		/// # <weight>
+		///
+		/// Related functions:
+		/// - `Currency::unreserve` will be called once
 		#[pallet::weight(T::WeightInfo::remove_call())]
 		pub fn remove_call(
 			origin: OriginFor<T>,
