@@ -73,7 +73,7 @@ benchmarks! {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
 		assert_eq!(Pallet::<T>::nonce_call(0), 1);
 		assert_eq!(Pallet::<T>::votes(0, 0), 1);
-		assert_eq!(Pallet::<T>::users_votes((0, 0), alice), true);
+		assert!(Pallet::<T>::users_votes((0, 0), alice));
 	}
 
 	remove_call {
@@ -96,6 +96,6 @@ benchmarks! {
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
 		assert_eq!(Pallet::<T>::nonce_call(0), 1);
-		assert_eq!(Pallet::<T>::calls(0, 0).is_none(), true);
+		assert!(Pallet::<T>::calls(0, 0).is_none());
 	}
 }

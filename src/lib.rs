@@ -294,13 +294,13 @@ pub mod pallet {
 		pub fn get_supersig_index_from_id(id: &T::AccountId) -> Option<u128> {
 			if let Some((account, index)) = PalletId::try_from_sub_account(id) {
 				if account != T::PalletId::get() {
-					return None
+					return None;
 				}
 				if index < Self::nonce_supersig() {
-					return Some(index)
+					Some(index)
 				} else {
-					return None
-				}
+                    None
+                }
 			} else {
 				None
 			}
@@ -311,10 +311,7 @@ pub mod pallet {
 		}
 
 		pub fn is_user_in_supersig(supersig_id: u128, user: &T::AccountId) -> bool {
-			match Self::supersigs(supersig_id).map(|supersig| supersig.members.contains(user)) {
-				None => false,
-				Some(r) => r,
-			}
+		    Self::supersigs(supersig_id).map(|supersig| supersig.members.contains(user)).unwrap_or(false)
 		}
 
 		pub fn execute_call(supersig_index: u128, call_index: u128) {
