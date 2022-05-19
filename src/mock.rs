@@ -14,7 +14,6 @@ type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::Accoun
 
 #[frame_support::pallet]
 pub mod nothing {
-	// use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
@@ -29,7 +28,6 @@ pub mod nothing {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Nothing {},
 	}
@@ -38,13 +36,12 @@ pub mod nothing {
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1000)]
 		pub fn do_nothing(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
+			ensure_signed(origin)?;
 			Ok(().into())
 		}
 	}
 }
 
-// Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
 		Block = Block,
@@ -126,6 +123,7 @@ impl pallet_supersig::Config for Test {
 	type Event = Event;
 	type PalletId = SupersigPalletId;
 	type PreimageByteDeposit = SupersigPreimageByteDeposit;
+    type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
 }
 
 pub type NoCall = nothing::Call<Test>;

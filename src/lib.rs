@@ -55,7 +55,10 @@ pub use sp_runtime::traits::{AccountIdConversion, Dispatchable, Hash, Saturating
 pub use sp_std::{boxed::Box, prelude::Vec};
 
 pub mod types;
+pub mod weights;
+
 pub use types::*;
+pub use weights::*;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -85,6 +88,8 @@ pub mod pallet {
 		/// The amount of balance that must be deposited per byte of preimage stored.
 		#[pallet::constant]
 		type PreimageByteDeposit: Get<BalanceOf<Self>>;
+        /// Weigths module
+        type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::storage]
@@ -166,7 +171,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(T::WeightInfo::create_supersig())]
 		pub fn create_supersig(
 			origin: OriginFor<T>,
 			members: Vec<T::AccountId>,
@@ -195,7 +200,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(T::WeightInfo::submit_call(call.encode().len() as u32))]
 		pub fn submit_call(
 			origin: OriginFor<T>,
 			supersig_id: T::AccountId,
@@ -210,7 +215,6 @@ pub mod pallet {
 			}
 			let nonce = Self::nonce_call(sindex);
 			let data = call.encode();
-			// let len = if data.len()
 			let deposit = <BalanceOf<T>>::from(data.len() as u32)
 				.saturating_mul(T::PreimageByteDeposit::get());
 
@@ -229,51 +233,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// ^
-		// |
-		// |
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		//
-		// DEPENDING ON PERFS, ONLY ONE OF THOSE CALL WILL BE KEPT
-		//
-		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		// |
-		// |
-		// v
-
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn submit_encoded_call(
-			origin: OriginFor<T>,
-			supersig_id: T::AccountId,
-			encoded_call: Vec<u8>,
-		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			let sindex = Self::get_supersig_index_from_id(&supersig_id)
-				.ok_or(Error::<T>::SupersigNotFound)?;
-
-			if !Self::is_user_in_supersig(sindex, &who) {
-				return Err(Error::<T>::NotMember.into())
-			}
-			let nonce = Self::nonce_call(sindex);
-			let deposit = <BalanceOf<T>>::from(encoded_call.len() as u32)
-				.saturating_mul(T::PreimageByteDeposit::get());
-
-			T::Currency::reserve(&who, deposit)?;
-
-			let preimage = PreimageCall::<T::AccountId, BalanceOf<T>> {
-				data: encoded_call,
-				provider: who.clone(),
-				deposit,
-			};
-
-			Calls::<T>::insert(sindex, nonce, preimage);
-			Self::deposit_event(Event::<T>::CallSubmitted(supersig_id, nonce, who));
-
-			NonceCall::<T>::insert(sindex, nonce + 1);
-			Ok(())
-		}
-
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(T::WeightInfo::approve_call())]
 		pub fn approve_call(
 			origin: OriginFor<T>,
 			supersig_id: T::AccountId,
@@ -310,7 +270,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(T::WeightInfo::remove_call())]
 		pub fn remove_call(
 			origin: OriginFor<T>,
 			supersig_id: T::AccountId,
