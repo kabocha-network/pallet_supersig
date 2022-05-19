@@ -88,8 +88,8 @@ pub mod pallet {
 		/// The amount of balance that must be deposited per byte of preimage stored.
 		#[pallet::constant]
 		type PreimageByteDeposit: Get<BalanceOf<Self>>;
-        /// Weigths module
-        type WeightInfo: WeightInfo;
+		/// Weigths module
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::storage]

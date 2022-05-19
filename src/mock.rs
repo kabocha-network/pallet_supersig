@@ -123,7 +123,7 @@ impl pallet_supersig::Config for Test {
 	type Event = Event;
 	type PalletId = SupersigPalletId;
 	type PreimageByteDeposit = SupersigPreimageByteDeposit;
-    type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
+	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
 }
 
 pub type NoCall = nothing::Call<Test>;

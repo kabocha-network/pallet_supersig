@@ -4,9 +4,7 @@
 use super::*;
 
 use crate::Pallet;
-use frame_benchmarking::{
-	account as benchmark_account, benchmarks,
-};
+use frame_benchmarking::{account as benchmark_account, benchmarks};
 use frame_support::{assert_ok, traits::Get};
 use frame_system::RawOrigin;
 use sp_std::vec;
@@ -27,8 +25,8 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
-        let val: BalanceOf<T> = 1_000_000_000u32.into();
-        T::Currency::make_free_balance_be(&alice, val.saturating_mul(10000u32.into()));
+		let val: BalanceOf<T> = 1_000_000_000u32.into();
+		T::Currency::make_free_balance_be(&alice, val.saturating_mul(10000u32.into()));
 
 
 	}: _(RawOrigin::Signed(alice.clone()), vec!(alice.clone(), bob, charlie), 2)
@@ -44,8 +42,8 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
-        let val: BalanceOf<T> = 4_000_000_000u32.into();
-        T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
+		let val: BalanceOf<T> = 4_000_000_000u32.into();
+		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
 		let supersig_id = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
 
@@ -63,13 +61,13 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
-        let val: BalanceOf<T> = 4_000_000_000u32.into();
-        T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
+		let val: BalanceOf<T> = 4_000_000_000u32.into();
+		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
 		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
 
 		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice.clone(), bob, charlie), 2));
-        assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
+		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
 	}: _(RawOrigin::Signed(alice.clone()), supersig_id, 0)
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
@@ -86,14 +84,14 @@ benchmarks! {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
-        let val: BalanceOf<T> = 4_000_000_000u32.into();
-        T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
+		let val: BalanceOf<T> = 4_000_000_000u32.into();
+		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
 		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
 
 		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice.clone(), bob, charlie), 2));
-        assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
-        assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), 0));
+		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
+		assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), 0));
 	}: _(RawOrigin::Signed(alice.clone()), supersig_id, 0)
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);

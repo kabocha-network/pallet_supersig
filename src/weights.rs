@@ -45,7 +45,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Supersig Supersigs (r:0 w:1)
 	fn create_supersig() -> Weight {
 		(57_023_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+		    .saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	// Storage: Supersig NonceSupersig (r:1 w:0)
