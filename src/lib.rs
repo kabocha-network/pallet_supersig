@@ -295,7 +295,7 @@ pub mod pallet {
 			let supersig = Self::supersigs(sindex).unwrap();
 			let total_votes = Self::votes(sindex, call_index);
 
-			if total_votes >= supersig.members.len() as u128 {
+			if total_votes >= supersig.members.len() as u128 / 2 + 1 {
 				Self::execute_call(sindex, call_index);
 			}
 

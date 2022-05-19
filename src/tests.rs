@@ -85,20 +85,6 @@ fn create_with_empty_list() {
 	});
 }
 
-#[test]
-fn create_with_bad_threshold() {
-	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		assert_noop!(
-			Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE())),
-			Error::<Test>::InvalidSupersig
-		);
-		assert_noop!(
-			Supersig::create_supersig(Origin::signed(ALICE()), vec!(ALICE(), BOB(), CHARLIE())),
-			Error::<Test>::InvalidSupersig
-		);
-	});
-}
-
 ////////////
 //
 // submit_call() tests
