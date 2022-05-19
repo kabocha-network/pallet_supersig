@@ -297,9 +297,9 @@ pub mod pallet {
 					return None
 				}
 				if index < Self::nonce_supersig() {
-					return Some(index)
+					Some(index)
 				} else {
-					return None
+					None
 				}
 			} else {
 				None
@@ -311,10 +311,9 @@ pub mod pallet {
 		}
 
 		pub fn is_user_in_supersig(supersig_id: u128, user: &T::AccountId) -> bool {
-			match Self::supersigs(supersig_id).map(|supersig| supersig.members.contains(user)) {
-				None => false,
-				Some(r) => r,
-			}
+			Self::supersigs(supersig_id)
+				.map(|supersig| supersig.members.contains(user))
+				.unwrap_or(false)
 		}
 
 		pub fn execute_call(supersig_index: u128, call_index: u128) {

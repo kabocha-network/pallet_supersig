@@ -208,7 +208,7 @@ fn approve_call() {
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
-			Box::new(call.clone())
+			Box::new(call)
 		));
 
 		assert_ok!(Supersig::approve_call(
@@ -217,7 +217,7 @@ fn approve_call() {
 			0
 		));
 		assert_eq!(Supersig::votes(0, 0), 1);
-		assert_eq!(Supersig::users_votes((0, 0), ALICE()), true);
+		assert!(Supersig::users_votes((0, 0), ALICE()));
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(CHARLIE()),
@@ -225,8 +225,8 @@ fn approve_call() {
 			0
 		));
 		assert_eq!(Supersig::votes(0, 0), 2);
-		assert_eq!(Supersig::users_votes((0, 0), CHARLIE()), true);
-		assert_eq!(Supersig::users_votes((0, 0), BOB()), false);
+		assert!(Supersig::users_votes((0, 0), CHARLIE()));
+		assert!(!Supersig::users_votes((0, 0), BOB()));
 	})
 }
 
@@ -243,7 +243,7 @@ fn approve_call_until_threshold() {
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
-			Box::new(call.clone())
+			Box::new(call)
 		));
 
 		assert_ok!(Supersig::approve_call(
@@ -258,11 +258,11 @@ fn approve_call_until_threshold() {
 		));
 
 		assert_eq!(Supersig::votes(0, 0), 2);
-		assert_eq!(Supersig::users_votes((0, 0), ALICE()), true);
-		assert_eq!(Supersig::users_votes((0, 0), BOB()), true);
-		assert_eq!(Supersig::users_votes((0, 0), CHARLIE()), false);
+		assert!(Supersig::users_votes((0, 0), ALICE()));
+		assert!(Supersig::users_votes((0, 0), BOB()));
+		assert!(!Supersig::users_votes((0, 0), CHARLIE()));
 
-		assert_eq!(Supersig::calls(0, 0).is_none(), true);
+		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Balances::reserved_balance(ALICE()), 0);
 	})
 }
@@ -280,7 +280,7 @@ fn approve_supersig_doesnt_exist() {
 		let call = Call::Nothing(NoCall::do_nothing {});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(CHARLIE()),
-			supersig_id.clone(),
+			supersig_id,
 			Box::new(call)
 		));
 		assert_noop!(
@@ -363,13 +363,13 @@ fn remove_call() {
 			supersig_id.clone(),
 			Box::new(call)
 		));
-		assert_eq!(Supersig::calls(0, 0).is_some(), true);
+		assert!(Supersig::calls(0, 0).is_some());
 		assert_ok!(Supersig::remove_call(
 			Origin::signed(supersig_id.clone()),
-			supersig_id.clone(),
+			supersig_id,
 			0
 		));
-		assert_eq!(Supersig::calls(0, 0).is_none(), true);
+		assert!(Supersig::calls(0, 0).is_none());
 	})
 }
 
@@ -390,7 +390,7 @@ fn non_allowed_remove_call() {
 			Box::new(call)
 		));
 		assert_noop!(
-			Supersig::remove_call(Origin::signed(BOB()), supersig_id.clone(), 0),
+			Supersig::remove_call(Origin::signed(BOB()), supersig_id, 0),
 			Error::<Test>::NotAllowed
 		);
 	})

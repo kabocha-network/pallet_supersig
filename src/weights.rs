@@ -44,9 +44,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System Account (r:2 w:2)
 	// Storage: Supersig Supersigs (r:0 w:1)
 	fn create_supersig() -> Weight {
-		(57_023_000 as Weight)
-		    .saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		(57_023_000u64)
+		    .saturating_add(T::DbWeight::get().reads(3u64))
+			.saturating_add(T::DbWeight::get().writes(4u64))
 	}
 	// Storage: Supersig NonceSupersig (r:1 w:0)
 	// Storage: Supersig Supersigs (r:1 w:0)
@@ -54,11 +54,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System Account (r:1 w:1)
 	// Storage: Supersig Calls (r:0 w:1)
 	fn submit_call(z: u32, ) -> Weight {
-		(47_284_000 as Weight)
+		(47_284_000u64)
 			// Standard Error: 0
-			.saturating_add((1_000 as Weight).saturating_mul(z as Weight))
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+			.saturating_add((1_000u64).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(4u64))
+			.saturating_add(T::DbWeight::get().writes(3u64))
 	}
 	// Storage: Supersig NonceSupersig (r:1 w:0)
 	// Storage: Supersig Supersigs (r:1 w:0)
@@ -66,21 +66,21 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Supersig UsersVotes (r:1 w:1)
 	// Storage: Supersig Votes (r:1 w:1)
 	fn approve_call() -> Weight {
-		(43_870_000 as Weight)
+		(43_870_000u64)
 			// Standard Error: 0
-			.saturating_add((3_000 as Weight))
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+			.saturating_add(3_000u64)
+			.saturating_add(T::DbWeight::get().reads(5u64))
+			.saturating_add(T::DbWeight::get().writes(2u64))
 	}
 	// Storage: Supersig NonceSupersig (r:1 w:0)
 	// Storage: Supersig Calls (r:1 w:1)
 	// Storage: System Account (r:1 w:1)
 	fn remove_call() -> Weight {
-		(41_556_000 as Weight)
+		(41_556_000u64)
 			// Standard Error: 0
-			.saturating_add((3_000 as Weight))
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+			.saturating_add(3_000u64)
+			.saturating_add(T::DbWeight::get().reads(3u64))
+			.saturating_add(T::DbWeight::get().writes(2u64))
 	}
 }
 
