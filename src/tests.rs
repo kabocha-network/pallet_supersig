@@ -426,7 +426,11 @@ fn add_users_unknown_supersig() {
 		));
 		let bad_supersig_id = get_account_id(1);
 		assert_noop!(
-			Supersig::add_members(Origin::signed(bad_supersig_id.clone()), bad_supersig_id, vec!(BOB(), CHARLIE())),
+			Supersig::add_members(
+				Origin::signed(bad_supersig_id.clone()),
+				bad_supersig_id,
+				vec!(BOB(), CHARLIE())
+			),
 			Error::<Test>::SupersigNotFound
 		);
 	})

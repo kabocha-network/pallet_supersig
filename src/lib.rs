@@ -339,12 +339,11 @@ pub mod pallet {
 		/// add members the supersig
 		///
 		/// `remove_call` will add a list of addesses to the members list of the supersig.
-        /// if an address is already present, it will be ignored.
+		/// if an address is already present, it will be ignored.
 		///
 		/// The dispatch origin for this call must be `Signed` by the supersig
 		///
 		/// # <weight>
-		///
 		#[pallet::weight(T::WeightInfo::remove_call())]
 		pub fn add_members(
 			origin: OriginFor<T>,
@@ -357,16 +356,16 @@ pub mod pallet {
 			}
 			let sindex = Self::get_supersig_index_from_id(&supersig_id)
 				.ok_or(Error::<T>::SupersigNotFound)?;
-            let mut new_members = new_members;
+			let mut new_members = new_members;
 
-            Supersigs::<T>::mutate(sindex, |wrapped_supersig| {
-                if let Some(supersig) = wrapped_supersig {
-                    new_members.retain(|memb| !supersig.members.contains(&memb));
-                    supersig.members.append(new_members.as_mut());
-                }
-            });
+			Supersigs::<T>::mutate(sindex, |wrapped_supersig| {
+				if let Some(supersig) = wrapped_supersig {
+					new_members.retain(|memb| !supersig.members.contains(memb));
+					supersig.members.append(new_members.as_mut());
+				}
+			});
 
-            Self::deposit_event(Event::<T>::UsersAdded(supersig_id, new_members));
+			Self::deposit_event(Event::<T>::UsersAdded(supersig_id, new_members));
 
 			Ok(())
 		}
