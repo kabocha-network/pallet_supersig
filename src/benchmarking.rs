@@ -8,10 +8,15 @@ use frame_benchmarking::{account as benchmark_account, benchmarks};
 use frame_support::{assert_ok, traits::Get};
 use frame_system::RawOrigin;
 use sp_std::vec;
+use codec::{Decode, Encode};
+use sp_runtime::traits::TrailingZeroInput;
+use sp_core::blake2_256;
 
-pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
-	let account: T::AccountId = benchmark_account(name, 0, 0);
-	account
+/// Grab an account, seeded by a name and index.
+pub fn get_account<T: Config>(name: &str) -> T::AccountId {
+	let entropy = (name, 0, 0).using_encoded(blake2_256);
+	Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+		.expect("infinite length input; no invalid inputs for type; qed")
 }
 
 // pub type BalanceCall = pallet_balances::Call<T>;
@@ -98,4 +103,28 @@ benchmarks! {
 		assert_eq!(Pallet::<T>::nonce_call(0), 1);
 		assert!(Pallet::<T>::calls(0, 0).is_none());
 	}
+
+    add_members {
+		let z in 0 .. 10_000;
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+		let charlie: T::AccountId = get_account::<T>("CHARLIE");
+
+        let mut new_users: Vec<T::AccountId> = Vec::new();
+
+        for i in 1..z {
+            let name = format!("acc{}", new_users.len());
+            let new: T::AccountId = get_account::<T>(&name);
+            new_users.push(new);
+        }
+		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
+
+		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice.clone(), bob.clone(), charlie.clone())));
+    }: _(RawOrigin::Signed(alice.clone()), supersig_id, new_users.clone())
+    verify {
+        let mut new_users = new_users;
+        let mut tmp = vec!(alice, bob, charlie);
+        tmp.append(new_users.as_mut());
+        assert_eq!(Pallet::<T>::supersigs(0).unwrap().members, tmp);
+    }
 }
