@@ -58,7 +58,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	fn submit_call(z: u32, ) -> Weight {
 		(47_284_000u64)
 			// Standard Error: 0
-			.saturating_add((1_000u64).saturating_mul(zu64))
+			.saturating_add((1_000u64).saturating_mul(z as Weight))
 			.saturating_add(T::DbWeight::get().reads(4u64))
 			.saturating_add(T::DbWeight::get().writes(3u64))
 	}
