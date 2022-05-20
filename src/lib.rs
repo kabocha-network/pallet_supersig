@@ -151,8 +151,10 @@ pub mod pallet {
 		/// a Call has been removed [supersig, call_nonce]
 		CallRemoved(T::AccountId, CallIndex),
 		/// the list of users added to the supersig. Users that were already
-		/// in the supersig wont appear
+		/// in the supersig wont appear [supersig, added_users]
 		UsersAdded(T::AccountId, Vec<T::AccountId>),
+		/// the list of users removed from the supersig. [supersig, removed_users]
+		UsersRemoved(T::AccountId, Vec<T::AccountId>),
 	}
 
 	#[pallet::error]
@@ -338,13 +340,13 @@ pub mod pallet {
 
 		/// add members the supersig
 		///
-		/// `remove_call` will add a list of addesses to the members list of the supersig.
+		/// `add members` will add a list of addesses to the members list of the supersig.
 		/// if an address is already present, it will be ignored.
 		///
 		/// The dispatch origin for this call must be `Signed` by the supersig
 		///
 		/// # <weight>
-		#[pallet::weight(T::WeightInfo::remove_call())]
+		#[pallet::weight(T::WeightInfo::add_members(new_members.len() as u32))]
 		pub fn add_members(
 			origin: OriginFor<T>,
 			supersig_id: T::AccountId,
@@ -366,6 +368,41 @@ pub mod pallet {
 			});
 
 			Self::deposit_event(Event::<T>::UsersAdded(supersig_id, new_members));
+
+			Ok(())
+		}
+
+		/// remove members from the supersig
+		///
+		/// `remove_members` will remove a list of addesses from the members list of the supersig.
+		/// if an address is not present, it will be ignored.
+		///
+		/// The dispatch origin for this call must be `Signed` by the supersig
+		///
+		/// # <weight>
+		#[pallet::weight(T::WeightInfo::remove_members(members_to_remove.len() as u32))]
+		pub fn remove_members(
+			origin: OriginFor<T>,
+			supersig_id: T::AccountId,
+			members_to_remove: Vec<T::AccountId>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			if who != supersig_id {
+				return Err(Error::<T>::NotAllowed.into())
+			}
+			let sindex = Self::get_supersig_index_from_id(&supersig_id)
+				.ok_or(Error::<T>::SupersigNotFound)?;
+			// let mut new_members = new_members;
+
+			Supersigs::<T>::mutate(sindex, |wrapped_supersig| {
+				if let Some(supersig) = wrapped_supersig {
+					supersig.members.retain(|memb| !members_to_remove.contains(memb));
+					// new_members.retain(|memb| supersig.members.contains(memb));
+					// supersig.members.append(new_members.as_mut());
+				}
+			});
+
+			Self::deposit_event(Event::<T>::UsersRemoved(supersig_id, members_to_remove));
 
 			Ok(())
 		}

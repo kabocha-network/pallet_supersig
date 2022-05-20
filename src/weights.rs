@@ -35,6 +35,8 @@ pub trait WeightInfo {
     fn submit_call(z: u32) -> Weight;
     fn approve_call() -> Weight;
     fn remove_call() -> Weight;
+    fn add_members(z: u32) -> Weight;
+    fn remove_members(z: u32) -> Weight;
 }
 
 /// Weight functions for `pallet_supersig`.
@@ -81,6 +83,24 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			.saturating_add(3_000u64)
 			.saturating_add(T::DbWeight::get().reads(3u64))
 			.saturating_add(T::DbWeight::get().writes(2u64))
+	}
+	// Storage: Supersig NonceSupersig (r:1 w:0)
+	// Storage: Supersig Supersigs (r:1 w:1)
+	fn add_members(z: u32, ) -> Weight {
+		(29_135_000 as Weight)
+			// Standard Error: 0
+			.saturating_add((79_000 as Weight).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	// Storage: Supersig NonceSupersig (r:1 w:0)
+	// Storage: Supersig Supersigs (r:1 w:1)
+	fn remove_members(z: u32, ) -> Weight {
+		(0 as Weight)
+			// Standard Error: 2_310_000
+			.saturating_add((94_862_000 as Weight).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 }
 
