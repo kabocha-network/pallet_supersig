@@ -108,9 +108,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Supersig Supersigs (r:1 w:1)
 	// Storage: Supersig NonceCall (r:0 w:1)
 	fn remove_supersig() -> Weight {
-		(107_739_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		(107_739_000u64)
+			.saturating_add(T::DbWeight::get().reads(4u64))
+			.saturating_add(T::DbWeight::get().writes(4u64))
 	}
 }
 
