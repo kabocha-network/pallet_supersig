@@ -127,12 +127,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn users_votes)]
-	pub type UsersVotes<T: Config> = StorageDoubleMap<
+	pub type UsersVotes<T: Config> = StorageNMap<
 		_,
-		Blake2_256,
-		(SigIndex, CallIndex),
-		Blake2_256,
-		T::AccountId,
+		(
+			NMapKey<Blake2_256, SigIndex>,
+			NMapKey<Blake2_256, CallIndex>,
+			NMapKey<Blake2_256, T::AccountId>,
+		),
 		bool,
 		ValueQuery,
 	>;
@@ -155,6 +156,8 @@ pub mod pallet {
 		UsersAdded(T::AccountId, Vec<T::AccountId>),
 		/// the list of users removed from the supersig. [supersig, removed_users]
 		UsersRemoved(T::AccountId, Vec<T::AccountId>),
+		/// a supersig have been removed [supersig_id]
+		SupersigRemoved(T::AccountId),
 	}
 
 	#[pallet::error]
@@ -173,6 +176,8 @@ pub mod pallet {
 		AlreadyVoted,
 		/// the signatory is not the supersig.
 		NotAllowed,
+		/// the supersig couldn't be deleted. This is due to the supersig having locked tokens
+		CannotDeleteSupersig,
 	}
 
 	#[pallet::call]
@@ -192,6 +197,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create_supersig())]
 		pub fn create_supersig(origin: OriginFor<T>, members: Vec<T::AccountId>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			let members_len = members.len();
 			let supersig = Supersig::new(members).ok_or(Error::<T>::InvalidSupersig)?;
 			let index = Self::nonce_supersig();
 			let supersig_id: T::AccountId = T::PalletId::get().into_sub_account(index);
@@ -207,6 +213,11 @@ pub mod pallet {
 			Supersigs::<T>::insert(index, supersig);
 			NonceSupersig::<T>::put(index + 1);
 
+			for _ in 0..members_len {
+				//Err if the account's provider is 0, but we just created an account, and
+				//transfered the existencial deposit, so provider will be 1
+				let _res = frame_system::Pallet::<T>::inc_consumers(&supersig_id);
+			}
 			Self::deposit_event(Event::<T>::SupersigCreated(supersig_id));
 
 			Ok(())
@@ -252,7 +263,6 @@ pub mod pallet {
 
 			Calls::<T>::insert(sindex, nonce, preimage);
 			Self::deposit_event(Event::<T>::CallSubmitted(supersig_id, nonce, who));
-
 			NonceCall::<T>::insert(sindex, nonce + 1);
 			Ok(())
 		}
@@ -286,11 +296,11 @@ pub mod pallet {
 			if Self::calls(sindex, call_index).is_none() {
 				return Err(Error::<T>::CallNotFound.into())
 			}
-			if Self::users_votes((sindex, call_index), who.clone()) {
+			if Self::users_votes((sindex, call_index, who.clone())) {
 				return Err(Error::<T>::AlreadyVoted.into())
 			}
 
-			UsersVotes::<T>::insert((sindex, call_index), who.clone(), true);
+			UsersVotes::<T>::insert((sindex, call_index, who.clone()), true);
 			Votes::<T>::mutate(sindex, call_index, |val| *val += 1);
 
 			Self::deposit_event(Event::<T>::CallVoted(supersig_id, call_index, who));
@@ -333,8 +343,10 @@ pub mod pallet {
 				return Err(Error::<T>::NotAllowed.into())
 			}
 			Self::unchecked_remove_call(sindex, call_index);
-			Self::deposit_event(Event::<T>::CallRemoved(supersig_id, call_index));
+
 			T::Currency::unreserve(&preimage.provider, preimage.deposit);
+
+			Self::deposit_event(Event::<T>::CallRemoved(supersig_id, call_index));
 			Ok(())
 		}
 
@@ -363,6 +375,11 @@ pub mod pallet {
 			Supersigs::<T>::mutate(sindex, |wrapped_supersig| {
 				if let Some(supersig) = wrapped_supersig {
 					new_members.retain(|memb| !supersig.members.contains(memb));
+					for _ in 0..new_members.len() {
+						// this will never fail, because we set provider to 1 when creating the
+						// supersig
+						let _ = frame_system::Pallet::<T>::inc_consumers(&supersig_id);
+					}
 					supersig.members.append(new_members.as_mut());
 				}
 			});
@@ -392,18 +409,71 @@ pub mod pallet {
 			}
 			let sindex = Self::get_supersig_index_from_id(&supersig_id)
 				.ok_or(Error::<T>::SupersigNotFound)?;
-			// let mut new_members = new_members;
 
 			Supersigs::<T>::mutate(sindex, |wrapped_supersig| {
 				if let Some(supersig) = wrapped_supersig {
+					let old_len = supersig.members.len();
 					supersig.members.retain(|memb| !members_to_remove.contains(memb));
-					// new_members.retain(|memb| supersig.members.contains(memb));
-					// supersig.members.append(new_members.as_mut());
+					// this will never fail, because we set provider to 1 when creating the
+					// supersig
+					for _ in 0..(old_len - supersig.members.len()) {
+						frame_system::Pallet::<T>::dec_consumers(&supersig_id);
+					}
 				}
 			});
 
 			Self::deposit_event(Event::<T>::UsersRemoved(supersig_id, members_to_remove));
 
+			Ok(())
+		}
+
+		/// remove the supersig
+		///
+		/// `remove_supersig` will remove every members, transfer every remanent funds to the
+		/// target account, remove the supersig from storage, and set the consumers and providers
+		/// to 0
+		///
+		/// The dispatch origin for this call must be `Signed` by the supersig
+		///
+		/// # <weight>
+		#[pallet::weight(T::WeightInfo::remove_supersig())]
+		pub fn remove_supersig(
+			origin: OriginFor<T>,
+			supersig_id: T::AccountId,
+			beneficiary: T::AccountId,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			if who != supersig_id {
+				return Err(Error::<T>::NotAllowed.into())
+			}
+			let sindex = Self::get_supersig_index_from_id(&supersig_id)
+				.ok_or(Error::<T>::SupersigNotFound)?;
+
+			let balance = T::Currency::total_balance(&supersig_id);
+			if balance != T::Currency::free_balance(&supersig_id) {
+				return Err(Error::<T>::CannotDeleteSupersig.into())
+			}
+			// the supersig exist
+			let nb_members = Self::supersigs(sindex).unwrap().members.len();
+			NonceCall::<T>::remove(sindex);
+			Supersigs::<T>::remove(sindex);
+			Calls::<T>::remove_prefix(sindex, None);
+			Votes::<T>::remove_prefix(sindex, None);
+			UsersVotes::<T>::remove_prefix((sindex,), None);
+			// this will never fail, because we set provider to 1 when creating the
+			// supersig
+			for _ in 0..nb_members {
+				frame_system::Pallet::<T>::dec_consumers(&supersig_id);
+			}
+			// the source account have enough funds.
+			let _ = T::Currency::transfer(
+				&supersig_id,
+				&beneficiary,
+				balance,
+				ExistenceRequirement::AllowDeath,
+			);
+			// the account exist, and there is no consumers anymore, so we can ignore result
+			let _ = frame_system::Pallet::<T>::dec_providers(&supersig_id);
 			Ok(())
 		}
 	}

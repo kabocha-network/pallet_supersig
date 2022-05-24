@@ -168,7 +168,7 @@ impl Default for ExtBuilder {
 			caps_endowed_accounts: vec![
 				(ALICE(), 1_000_000),
 				(BOB(), 100_000),
-				(CHARLIE(), 100_000),
+				(CHARLIE(), 101_000),
 			],
 		}
 	}

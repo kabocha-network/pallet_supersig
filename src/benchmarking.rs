@@ -67,7 +67,7 @@ benchmarks! {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
 		assert_eq!(Pallet::<T>::nonce_call(0), 1);
 		assert_eq!(Pallet::<T>::votes(0, 0), 1);
-		assert!(Pallet::<T>::users_votes((0, 0), alice));
+		assert!(Pallet::<T>::users_votes((0, 0, alice)));
 	}
 
 	remove_call {
@@ -138,5 +138,24 @@ benchmarks! {
 	}: _(RawOrigin::Signed(supersig_id.clone()), supersig_id.clone(), new_users)
 	verify {
 		assert_eq!(Pallet::<T>::supersigs(0).unwrap().members, vec!(alice.clone(), bob.clone(), charlie));
+	}
+	remove_supersig {
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+		let charlie: T::AccountId = get_account::<T>("CHARLIE");
+		let val: BalanceOf<T> = 1_000_000_000u32.into();
+		T::Currency::make_free_balance_be(&alice, val.saturating_mul(10000u32.into()));
+		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
+
+		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice, bob.clone(), charlie)));
+	}: _(RawOrigin::Signed(supersig_id.clone()), supersig_id.clone(), bob)
+	verify {
+
+		assert_eq!(Pallet::<T>::supersigs(0), None);
+		assert_eq!(Pallet::<T>::nonce_call(0), 0);
+		assert!(Pallet::<T>::calls(0, 0).is_none());
+		assert_eq!(Pallet::<T>::votes(0, 0), 0);
+		assert_eq!(frame_system::Pallet::<T>::consumers(&supersig_id), 0);
+		assert_eq!(frame_system::Pallet::<T>::providers(&supersig_id), 0);
 	}
 }

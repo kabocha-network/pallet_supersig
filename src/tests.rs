@@ -1,5 +1,8 @@
 use crate::{mock::*, Error, Supersig as SupersigStruct};
-use frame_support::{assert_noop, assert_ok, traits::Currency};
+use frame_support::{
+	assert_noop, assert_ok,
+	traits::{Currency, ReservableCurrency},
+};
 use sp_runtime::traits::AccountIdConversion;
 pub use sp_std::boxed::Box;
 
@@ -27,6 +30,14 @@ fn create_supersig() {
 		);
 		assert_eq!(Supersig::nonce_supersig(), 1);
 		assert_eq!(Supersig::supersigs(0).unwrap(), supersig);
+		assert_eq!(
+			frame_system::Pallet::<Test>::consumers(&get_account_id(0)),
+			supersig.members.len() as u32
+		);
+		assert_eq!(
+			frame_system::Pallet::<Test>::providers(&get_account_id(0)),
+			1
+		);
 	});
 }
 
@@ -183,7 +194,7 @@ fn approve_call() {
 			0
 		));
 		assert_eq!(Supersig::votes(0, 0), 1);
-		assert!(Supersig::users_votes((0, 0), ALICE()));
+		assert!(Supersig::users_votes((0, 0, ALICE())));
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(CHARLIE()),
@@ -191,8 +202,8 @@ fn approve_call() {
 			0
 		));
 		assert_eq!(Supersig::votes(0, 0), 2);
-		assert!(Supersig::users_votes((0, 0), CHARLIE()));
-		assert!(!Supersig::users_votes((0, 0), BOB()));
+		assert!(Supersig::users_votes((0, 0, CHARLIE())));
+		assert!(!Supersig::users_votes((0, 0, BOB())));
 	})
 }
 
@@ -223,9 +234,9 @@ fn approve_call_until_threshold() {
 		));
 
 		assert_eq!(Supersig::votes(0, 0), 2);
-		assert!(Supersig::users_votes((0, 0), ALICE()));
-		assert!(Supersig::users_votes((0, 0), BOB()));
-		assert!(!Supersig::users_votes((0, 0), CHARLIE()));
+		assert!(Supersig::users_votes((0, 0, ALICE())));
+		assert!(Supersig::users_votes((0, 0, BOB())));
+		assert!(!Supersig::users_votes((0, 0, CHARLIE())));
 
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Balances::reserved_balance(ALICE()), 0);
@@ -399,6 +410,10 @@ fn add_members() {
 		));
 		let supersig = Supersig::supersigs(0).unwrap();
 		assert_eq!(supersig.members, vec!(ALICE(), BOB(), CHARLIE()));
+		assert_eq!(
+			frame_system::Pallet::<Test>::consumers(&get_account_id(0)),
+			supersig.members.len() as u32
+		);
 	})
 }
 
@@ -457,6 +472,10 @@ fn remove_members() {
 		));
 		let supersig = Supersig::supersigs(0).unwrap();
 		assert_eq!(supersig.members, vec!(ALICE()));
+		assert_eq!(
+			frame_system::Pallet::<Test>::consumers(&get_account_id(0)),
+			supersig.members.len() as u32
+		);
 	})
 }
 
@@ -490,6 +509,112 @@ fn remove_users_unknown_supersig() {
 				vec!(BOB(), CHARLIE())
 			),
 			Error::<Test>::SupersigNotFound
+		);
+	})
+}
+
+////////////
+//
+// remove_supersig test
+//
+////////////
+
+#[test]
+fn remove_supersig() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			Origin::signed(ALICE()),
+			vec!(ALICE(), BOB(), CHARLIE()),
+		));
+		let supersig_id = get_account_id(0);
+		let bob_balance = Balances::free_balance(BOB());
+		let amount = 10_000u64;
+		assert_ok!(Balances::transfer(
+			Origin::signed(ALICE()),
+			supersig_id.clone(),
+			amount
+		));
+		assert_eq!(
+			frame_system::Pallet::<Test>::consumers(&supersig_id),
+			3
+		);
+		assert_ok!(Supersig::remove_supersig(
+			Origin::signed(supersig_id.clone()),
+			supersig_id.clone(),
+			BOB()
+		));
+
+		assert_eq!(Supersig::supersigs(0), None);
+		assert_eq!(Supersig::nonce_call(0), 0);
+		assert!(Supersig::calls(0, 0).is_none());
+		assert_eq!(Supersig::votes(0, 0), 0);
+		assert_eq!(
+			frame_system::Pallet::<Test>::consumers(&supersig_id),
+			0
+		);
+		assert_eq!(
+			frame_system::Pallet::<Test>::providers(&supersig_id),
+			0
+		);
+		assert_eq!(
+			Balances::free_balance(BOB()),
+			bob_balance + amount + Balances::minimum_balance()
+		);
+	})
+}
+
+#[test]
+fn remove_supersig_not_allowed() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			Origin::signed(ALICE()),
+			vec!(ALICE(), BOB()),
+		));
+		let supersig_id = get_account_id(0);
+		assert_noop!(
+			Supersig::remove_supersig(Origin::signed(ALICE()), supersig_id, BOB()),
+			Error::<Test>::NotAllowed
+		);
+	})
+}
+
+#[test]
+fn remove_supersig_unknown_supersig() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			Origin::signed(ALICE()),
+			vec!(ALICE(), BOB()),
+		));
+		let bad_supersig_id = get_account_id(1);
+		assert_noop!(
+			Supersig::remove_supersig(
+				Origin::signed(bad_supersig_id.clone()),
+				bad_supersig_id,
+				BOB()
+			),
+			Error::<Test>::SupersigNotFound
+		);
+	})
+}
+
+#[test]
+fn cannot_remove_supersig() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			Origin::signed(ALICE()),
+			vec!(ALICE(), BOB(), CHARLIE()),
+		));
+		let supersig_id = get_account_id(0);
+		let amount = 10_000u64;
+		assert_ok!(Balances::transfer(
+			Origin::signed(ALICE()),
+			supersig_id.clone(),
+			amount
+		));
+		assert_ok!(Balances::reserve(&supersig_id, amount));
+		assert_noop!(
+			Supersig::remove_supersig(Origin::signed(supersig_id.clone()), supersig_id, BOB()),
+			Error::<Test>::CannotDeleteSupersig
 		);
 	})
 }
