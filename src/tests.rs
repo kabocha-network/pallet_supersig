@@ -534,10 +534,7 @@ fn remove_supersig() {
 			supersig_id.clone(),
 			amount
 		));
-		assert_eq!(
-			frame_system::Pallet::<Test>::consumers(&supersig_id),
-			3
-		);
+		assert_eq!(frame_system::Pallet::<Test>::consumers(&supersig_id), 3);
 		assert_ok!(Supersig::remove_supersig(
 			Origin::signed(supersig_id.clone()),
 			supersig_id.clone(),
@@ -548,14 +545,8 @@ fn remove_supersig() {
 		assert_eq!(Supersig::nonce_call(0), 0);
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Supersig::votes(0, 0), 0);
-		assert_eq!(
-			frame_system::Pallet::<Test>::consumers(&supersig_id),
-			0
-		);
-		assert_eq!(
-			frame_system::Pallet::<Test>::providers(&supersig_id),
-			0
-		);
+		assert_eq!(frame_system::Pallet::<Test>::consumers(&supersig_id), 0);
+		assert_eq!(frame_system::Pallet::<Test>::providers(&supersig_id), 0);
 		assert_eq!(
 			Balances::free_balance(BOB()),
 			bob_balance + amount + Balances::minimum_balance()
