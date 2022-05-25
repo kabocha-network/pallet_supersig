@@ -215,7 +215,19 @@ fn approve_call_until_threshold() {
 			vec!(ALICE(), BOB(), CHARLIE()),
 		));
 		let supersig_id = get_account_id(0);
-		let call = Call::Nothing(NoCall::do_nothing {});
+		assert_ok!(Balances::transfer(
+			Origin::signed(ALICE()),
+			supersig_id.clone(),
+			100_000
+		));
+
+		let bob_balance = Balances::free_balance(BOB());
+
+		let call = Call::Balances(pallet_balances::Call::transfer {
+			dest: BOB(),
+			value: 100_000,
+		});
+
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
@@ -223,13 +235,14 @@ fn approve_call_until_threshold() {
 		));
 
 		assert_ok!(Supersig::approve_call(
-			Origin::signed(ALICE()),
+			Origin::signed(BOB()),
 			supersig_id.clone(),
 			0
 		));
+
 		assert_ok!(Supersig::approve_call(
-			Origin::signed(BOB()),
-			supersig_id,
+			Origin::signed(ALICE()),
+			supersig_id.clone(),
 			0
 		));
 
@@ -240,6 +253,8 @@ fn approve_call_until_threshold() {
 
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Balances::reserved_balance(ALICE()), 0);
+
+		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
 	})
 }
 
@@ -608,6 +623,44 @@ fn cannot_remove_supersig() {
 			Error::<Test>::CannotDeleteSupersig
 		);
 	})
+}
+
+#[test]
+fn cannot_liquidate_supersig() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			Origin::signed(ALICE()),
+			vec!(ALICE(), BOB(), CHARLIE()),
+		));
+		let supersig_id = get_account_id(0);
+
+		let call = Call::Balances(pallet_balances::Call::transfer_all {
+			dest: ALICE(),
+			keep_alive: false,
+		});
+
+		assert_ok!(Supersig::submit_call(
+			Origin::signed(ALICE()),
+			supersig_id.clone(),
+			Box::new(call.clone())
+		));
+
+		assert_ok!(Supersig::approve_call(
+			Origin::signed(BOB()),
+			supersig_id.clone(),
+			0
+		));
+
+		assert_ok!(Supersig::approve_call(
+			Origin::signed(CHARLIE()),
+			supersig_id.clone(),
+			0
+		));
+
+		assert!(Supersig::calls(0, 0).is_none());
+
+		assert!(System::account_exists(&supersig_id));
+	});
 }
 
 ////////////

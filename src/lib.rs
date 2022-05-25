@@ -47,6 +47,7 @@ mod benchmarking;
 pub use frame_support::{
 	dispatch::DispatchResult,
 	traits::{tokens::ExistenceRequirement, Currency, ReservableCurrency},
+	transactional,
 	weights::{GetDispatchInfo, PostDispatchInfo},
 	PalletId,
 };
@@ -194,11 +195,11 @@ pub mod pallet {
 		///
 		/// Related functions:
 		/// - `Currency::transfer` will be called once to deposit an existencial amount on supersig
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::create_supersig())]
 		pub fn create_supersig(origin: OriginFor<T>, members: Vec<T::AccountId>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let members_len = members.len();
-			let supersig = Supersig::new(members).ok_or(Error::<T>::InvalidSupersig)?;
+			let supersig = Supersig::new(members.clone()).ok_or(Error::<T>::InvalidSupersig)?;
 			let index = Self::nonce_supersig();
 			let supersig_id: T::AccountId = T::PalletId::get().into_sub_account(index);
 
@@ -213,11 +214,13 @@ pub mod pallet {
 			Supersigs::<T>::insert(index, supersig);
 			NonceSupersig::<T>::put(index + 1);
 
-			for _ in 0..members_len {
-				//Err if the account's provider is 0, but we just created an account, and
-				//transfered the existencial deposit, so provider will be 1
-				let _res = frame_system::Pallet::<T>::inc_consumers(&supersig_id);
+			// This mean the supersig account cannot be emptied while existing in this storage
+			frame_system::Pallet::<T>::inc_consumers(&supersig_id)?;
+			// This mean that the members account cannot be emptied while there are member of a supersig
+			for member in members {
+				frame_system::Pallet::<T>::inc_consumers(&member)?;
 			}
+
 			Self::deposit_event(Event::<T>::SupersigCreated(supersig_id));
 
 			Ok(())
@@ -246,7 +249,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::SupersigNotFound)?;
 
 			if !Self::is_user_in_supersig(sindex, &who) {
-				return Err(Error::<T>::NotMember.into())
+				return Err(Error::<T>::NotMember.into());
 			}
 			let nonce = Self::nonce_call(sindex);
 			let data = call.encode();
@@ -291,13 +294,13 @@ pub mod pallet {
 				.ok_or(Error::<T>::SupersigNotFound)?;
 
 			if !Self::is_user_in_supersig(sindex, &who) {
-				return Err(Error::<T>::NotMember.into())
+				return Err(Error::<T>::NotMember.into());
 			}
 			if Self::calls(sindex, call_index).is_none() {
-				return Err(Error::<T>::CallNotFound.into())
+				return Err(Error::<T>::CallNotFound.into());
 			}
 			if Self::users_votes((sindex, call_index, who.clone())) {
-				return Err(Error::<T>::AlreadyVoted.into())
+				return Err(Error::<T>::AlreadyVoted.into());
 			}
 
 			UsersVotes::<T>::insert((sindex, call_index, who.clone()), true);
@@ -340,7 +343,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::SupersigNotFound)?;
 			let preimage = Self::calls(sindex, call_index).ok_or(Error::<T>::CallNotFound)?;
 			if who != supersig_id && who != preimage.provider {
-				return Err(Error::<T>::NotAllowed.into())
+				return Err(Error::<T>::NotAllowed.into());
 			}
 			Self::unchecked_remove_call(sindex, call_index);
 
@@ -366,7 +369,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			if who != supersig_id {
-				return Err(Error::<T>::NotAllowed.into())
+				return Err(Error::<T>::NotAllowed.into());
 			}
 			let sindex = Self::get_supersig_index_from_id(&supersig_id)
 				.ok_or(Error::<T>::SupersigNotFound)?;
@@ -405,7 +408,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			if who != supersig_id {
-				return Err(Error::<T>::NotAllowed.into())
+				return Err(Error::<T>::NotAllowed.into());
 			}
 			let sindex = Self::get_supersig_index_from_id(&supersig_id)
 				.ok_or(Error::<T>::SupersigNotFound)?;
@@ -444,14 +447,14 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			if who != supersig_id {
-				return Err(Error::<T>::NotAllowed.into())
+				return Err(Error::<T>::NotAllowed.into());
 			}
 			let sindex = Self::get_supersig_index_from_id(&supersig_id)
 				.ok_or(Error::<T>::SupersigNotFound)?;
 
 			let balance = T::Currency::total_balance(&supersig_id);
 			if balance != T::Currency::free_balance(&supersig_id) {
-				return Err(Error::<T>::CannotDeleteSupersig.into())
+				return Err(Error::<T>::CannotDeleteSupersig.into());
 			}
 			// the supersig exist
 			let nb_members = Self::supersigs(sindex).unwrap().members.len();
@@ -482,7 +485,7 @@ pub mod pallet {
 		pub fn get_supersig_index_from_id(id: &T::AccountId) -> Option<u128> {
 			if let Some((account, index)) = PalletId::try_from_sub_account(id) {
 				if account != T::PalletId::get() {
-					return None
+					return None;
 				}
 				if index < Self::nonce_supersig() {
 					Some(index)
