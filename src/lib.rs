@@ -159,6 +159,8 @@ pub mod pallet {
 		UsersRemoved(T::AccountId, Vec<T::AccountId>),
 		/// a supersig have been removed [supersig_id]
 		SupersigRemoved(T::AccountId),
+		/// a member leaved the supersig [supersig_id, member]
+		SupersigLeaved(T::AccountId, T::AccountId),
 	}
 
 	#[pallet::error]
@@ -199,7 +201,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create_supersig())]
 		pub fn create_supersig(origin: OriginFor<T>, members: Vec<T::AccountId>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let supersig = Supersig::new(members.clone()).ok_or(Error::<T>::InvalidSupersig)?;
+			let supersig = Supersig::new(members).ok_or(Error::<T>::InvalidSupersig)?;
 			let index = Self::nonce_supersig();
 			let supersig_id: T::AccountId = T::PalletId::get().into_sub_account(index);
 
@@ -216,10 +218,6 @@ pub mod pallet {
 
 			// This mean the supersig account cannot be emptied while existing in this storage
 			frame_system::Pallet::<T>::inc_consumers(&supersig_id)?;
-			// This mean that the members account cannot be emptied while there are member of a supersig
-			for member in members {
-				frame_system::Pallet::<T>::inc_consumers(&member)?;
-			}
 
 			Self::deposit_event(Event::<T>::SupersigCreated(supersig_id));
 
@@ -248,21 +246,23 @@ pub mod pallet {
 			let sindex = Self::get_supersig_index_from_id(&supersig_id)
 				.ok_or(Error::<T>::SupersigNotFound)?;
 
-			if !Self::is_user_in_supersig(sindex, &who) {
-				return Err(Error::<T>::NotMember.into());
-			}
 			let nonce = Self::nonce_call(sindex);
 			let data = call.encode();
 			let deposit = <BalanceOf<T>>::from(data.len() as u32)
 				.saturating_mul(T::PreimageByteDeposit::get());
 
-			T::Currency::reserve(&who, deposit)?;
 
 			let preimage = PreimageCall::<T::AccountId, BalanceOf<T>> {
-				data,
+				data: data.clone(),
 				provider: who.clone(),
 				deposit,
 			};
+
+            if Calls::<T>::iter_prefix_values(sindex).any(|elem| elem.data == data) {
+                return Err(Error::<T>::CallAlreadyExists)?;
+            }
+
+			T::Currency::reserve(&who, deposit)?;
 
 			Calls::<T>::insert(sindex, nonce, preimage);
 			Self::deposit_event(Event::<T>::CallSubmitted(supersig_id, nonce, who));
@@ -479,6 +479,35 @@ pub mod pallet {
 			let _ = frame_system::Pallet::<T>::dec_providers(&supersig_id);
 			Ok(())
 		}
+		/// leave a supersig
+		///
+		/// `leave_supersig` will remove caller from selected supersig
+		///
+		/// The dispatch origin for this call must be `Signed` by the user.
+		///
+		/// # <weight>
+		///
+		#[transactional]
+		#[pallet::weight(T::WeightInfo::create_supersig())]
+		pub fn leave_supersig(origin: OriginFor<T>, supersig_id: T::AccountId) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			let sindex = Self::get_supersig_index_from_id(&supersig_id)
+				.ok_or(Error::<T>::SupersigNotFound)?;
+
+			if !Self::is_user_in_supersig(sindex, &who) {
+				return Err(Error::<T>::NotMember.into());
+			}
+
+            Supersigs::<T>::mutate(sindex, |wrapped_supersig| {
+                if let Some(supersig) = wrapped_supersig {
+                    supersig.members.retain(|memb| memb != &who);
+                }
+            });
+			Self::deposit_event(Event::<T>::SupersigLeaved(supersig_id, who));
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -525,6 +554,8 @@ pub mod pallet {
 
 		pub fn unchecked_remove_call(supersig_index: u128, call_index: u128) {
 			Calls::<T>::remove(supersig_index, call_index);
+			Votes::<T>::remove(supersig_index, call_index);
+			UsersVotes::<T>::remove_prefix((supersig_index, call_index,), None);
 		}
 	}
 }
