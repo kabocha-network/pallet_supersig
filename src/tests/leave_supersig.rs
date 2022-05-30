@@ -1,9 +1,6 @@
+use super::{helper::*, mock::*};
 use crate::Error;
-use super::mock::*;
-use super::helper::*;
-use frame_support::{
-	assert_noop, assert_ok,
-};
+use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
 #[test]
@@ -15,9 +12,15 @@ fn leave_supersig() {
 		));
 		let supersig_id = get_account_id(0);
 
-        assert_ok!(Supersig::leave_supersig(Origin::signed(ALICE()), supersig_id));
+		assert_ok!(Supersig::leave_supersig(
+			Origin::signed(ALICE()),
+			supersig_id
+		));
 
-        assert_eq!(Supersig::supersigs(0).unwrap().members, vec!(BOB(), CHARLIE()));
+		assert_eq!(
+			Supersig::supersigs(0).unwrap().members,
+			vec!(BOB(), CHARLIE())
+		);
 	})
 }
 
@@ -30,7 +33,10 @@ fn leave_supersig_not_a_member() {
 		));
 		let supersig_id = get_account_id(0);
 
-        assert_noop!(Supersig::leave_supersig(Origin::signed(CHARLIE()), supersig_id), Error::<Test>::NotMember);
+		assert_noop!(
+			Supersig::leave_supersig(Origin::signed(CHARLIE()), supersig_id),
+			Error::<Test>::NotMember
+		);
 	})
 }
 
@@ -43,7 +49,9 @@ fn leave_unknown_supersig() {
 		));
 		let bad_supersig_id = get_account_id(1);
 
-        assert_noop!(Supersig::leave_supersig(Origin::signed(CHARLIE()), bad_supersig_id), Error::<Test>::SupersigNotFound);
+		assert_noop!(
+			Supersig::leave_supersig(Origin::signed(CHARLIE()), bad_supersig_id),
+			Error::<Test>::SupersigNotFound
+		);
 	})
 }
-

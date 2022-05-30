@@ -1,6 +1,5 @@
+use super::{helper::*, mock::*};
 use crate::Error;
-use super::mock::*;
-use super::helper::*;
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::{Currency, ReservableCurrency},
@@ -113,7 +112,7 @@ fn cannot_liquidate_supersig() {
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
-			Box::new(call.clone())
+			Box::new(call)
 		));
 
 		assert_ok!(Supersig::approve_call(
@@ -133,4 +132,3 @@ fn cannot_liquidate_supersig() {
 		assert!(System::account_exists(&supersig_id));
 	});
 }
-

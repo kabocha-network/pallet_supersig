@@ -1,9 +1,6 @@
+use super::{helper::*, mock::*};
 use crate::Error;
-use super::mock::*;
-use super::helper::*;
-use frame_support::{
-	assert_noop, assert_ok,
-};
+use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
 #[test]
@@ -57,4 +54,3 @@ fn remove_users_unknown_supersig() {
 		);
 	})
 }
-

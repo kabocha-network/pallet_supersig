@@ -1,9 +1,6 @@
+use super::{helper::*, mock::*};
 use crate::Error;
-use super::mock::*;
-use super::helper::*;
-use frame_support::{
-	assert_noop, assert_ok,
-};
+use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
 #[test]
@@ -15,7 +12,9 @@ fn remove_call() {
 		));
 		let supersig_id = get_account_id(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {nothing: "test".into()});
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
@@ -43,7 +42,9 @@ fn non_allowed_remove_call() {
 		));
 		let supersig_id = get_account_id(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {nothing: "test".into()});
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
@@ -65,7 +66,9 @@ fn remove_unknown_call() {
 		));
 		let supersig_id = get_account_id(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {nothing: "test".into()});
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
@@ -77,4 +80,3 @@ fn remove_unknown_call() {
 		);
 	})
 }
-

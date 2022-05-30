@@ -1,9 +1,6 @@
+use super::{helper::*, mock::*};
 use crate::Error;
-use super::mock::*;
-use super::helper::*;
-use frame_support::{
-	assert_noop, assert_ok,
-};
+use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
 #[test]
@@ -15,20 +12,26 @@ fn submit_calls() {
 		));
 		let supersig_id = get_account_id(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {nothing: "test".into()});
-		let call1 = Call::Nothing(NoCall::do_nothing {nothing: "test1".into()});
-		let call2 = Call::Nothing(NoCall::do_nothing {nothing: "test2".into()});
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
+		let call1 = Call::Nothing(NoCall::do_nothing {
+			nothing: "test1".into(),
+		});
+		let call2 = Call::Nothing(NoCall::do_nothing {
+			nothing: "test2".into(),
+		});
 
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
-			Box::new(call.clone())
+			Box::new(call)
 		));
 		assert_eq!(Supersig::nonce_call(0), 1);
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(BOB()),
 			supersig_id.clone(),
-			Box::new(call1.clone())
+			Box::new(call1)
 		));
 		assert_eq!(Supersig::nonce_call(0), 2);
 		assert_ok!(Supersig::submit_call(
@@ -48,11 +51,12 @@ fn submit_supersig_doesnt_exist() {
 		));
 		let bad_supersig_id = get_account_id(1);
 
-		let call = Call::Nothing(NoCall::do_nothing {nothing: "test".into()});
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
 		assert_noop!(
 			Supersig::submit_call(Origin::signed(CHARLIE()), bad_supersig_id, Box::new(call)),
 			Error::<Test>::SupersigNotFound
 		);
 	})
 }
-

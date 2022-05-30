@@ -1,9 +1,7 @@
+use super::{helper::*, mock::*};
 use crate::Error;
-use super::mock::*;
-use super::helper::*;
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
-
 
 #[test]
 fn add_members() {
@@ -56,4 +54,3 @@ fn add_users_unknown_supersig() {
 		);
 	})
 }
-

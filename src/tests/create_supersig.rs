@@ -1,10 +1,6 @@
+use super::{helper::*, mock::*};
 use crate::{Error, Supersig as SupersigStruct};
-use super::mock::*;
-use super::helper::*;
-use frame_support::{
-	assert_noop, assert_ok,
-	traits::Currency
-};
+use frame_support::{assert_noop, assert_ok, traits::Currency};
 pub use sp_std::boxed::Box;
 
 #[test]
@@ -86,4 +82,3 @@ fn create_with_empty_list() {
 		);
 	});
 }
-

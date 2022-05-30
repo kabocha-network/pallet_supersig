@@ -158,15 +158,15 @@ benchmarks! {
 		assert_eq!(frame_system::Pallet::<T>::consumers(&supersig_id), 0);
 		assert_eq!(frame_system::Pallet::<T>::providers(&supersig_id), 0);
 	}
-    leave_supersig {
+	leave_supersig {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
 
 		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
 		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), vec!(alice, bob.clone(), charlie.clone())));
-    }: _(RawOrigin::Signed(supersig_id.clone()), supersig_id.clone())
-    verify {
-        assert_eq!(Pallet::<T>::supersigs(0).unwrap().members, vec!(bob, charlie));
-    }
+	}: _(RawOrigin::Signed(supersig_id.clone()), supersig_id.clone())
+	verify {
+		assert_eq!(Pallet::<T>::supersigs(0).unwrap().members, vec!(bob, charlie));
+	}
 }

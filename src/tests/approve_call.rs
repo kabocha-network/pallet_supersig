@@ -1,9 +1,6 @@
+use super::{helper::*, mock::*};
 use crate::Error;
-use super::mock::*;
-use super::helper::*;
-use frame_support::{
-	assert_noop, assert_ok,
-};
+use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
 ////////////
@@ -20,7 +17,9 @@ fn approve_call() {
 			vec!(ALICE(), BOB(), CHARLIE()),
 		));
 		let supersig_id = get_account_id(0);
-		let call = Call::Nothing(NoCall::do_nothing {nothing: "test".into()});
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
@@ -29,7 +28,7 @@ fn approve_call() {
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_id,
 			0
 		));
 		assert_eq!(Supersig::votes(0, 0), 1);
@@ -74,7 +73,7 @@ fn approve_call_until_threshold() {
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_id,
 			0
 		));
 
@@ -102,7 +101,9 @@ fn approve_supersig_doesnt_exist() {
 		));
 		let supersig_id = get_account_id(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {nothing: "test".into()});
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(CHARLIE()),
 			supersig_id,
@@ -124,7 +125,9 @@ fn user_already_voted() {
 		));
 		let supersig_id = get_account_id(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {nothing: "test".into()});
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(CHARLIE()),
 			supersig_id.clone(),
@@ -151,7 +154,9 @@ fn approve_not_a_member() {
 		));
 		let supersig_id = get_account_id(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {nothing: "test".into()});
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
