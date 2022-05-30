@@ -255,7 +255,7 @@ pub mod pallet {
 			};
 
 			if Calls::<T>::iter_prefix_values(sindex).any(|elem| elem.data == data) {
-				return Err(Error::<T>::CallAlreadyExists)?
+				return Err(Error::<T>::CallAlreadyExists.into())
 			}
 
 			T::Currency::reserve(&who, deposit)?;
