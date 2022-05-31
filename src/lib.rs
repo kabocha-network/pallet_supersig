@@ -51,7 +51,7 @@ pub use frame_support::{
 pub use sp_core::Hasher;
 
 pub use sp_runtime::traits::{AccountIdConversion, Dispatchable, Hash, Saturating};
-pub use sp_std::{boxed::Box, prelude::Vec, mem::size_of};
+pub use sp_std::{boxed::Box, mem::size_of, prelude::Vec};
 
 pub mod types;
 pub mod weights;
@@ -185,9 +185,10 @@ pub mod pallet {
 		/// create a supersig.
 		///
 		/// `create_supersig` will create a supersig with specified parameters, and transfer
-        /// currencies from the creator to the generated supersig:
-        ///     - the existencial deposit (minimum amount to make an account alive)
-        ///     - the price corresponding to the size (in bytes) of the members times the PricePerBytes
+		/// currencies from the creator to the generated supersig:
+		///     - the existencial deposit (minimum amount to make an account alive)
+		///     - the price corresponding to the size (in bytes) of the members times the
+		///       PricePerBytes
 		///
 		/// The dispatch origin for this call must be `Signed`.
 		///
@@ -196,7 +197,7 @@ pub mod pallet {
 		/// Related functions:
 		/// - `Currency::transfer` will be called once to deposit an existencial amount on supersig
 		/// - `frame_system::inc_consumers` will be called once to protect the supersig from
-        ///    deletion
+		///   deletion
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::create_supersig())]
 		pub fn create_supersig(origin: OriginFor<T>, members: Vec<T::AccountId>) -> DispatchResult {
@@ -206,19 +207,13 @@ pub mod pallet {
 			let supersig_id: T::AccountId = T::PalletId::get().into_sub_account(index);
 
 			let price = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
-                .saturating_mul((members.len() as u32).into())
+				.saturating_mul((members.len() as u32).into())
 				.saturating_mul(T::PricePerBytes::get());
-            let deposit = price
-                .saturating_add(T::Currency::minimum_balance());
+			let deposit = price.saturating_add(T::Currency::minimum_balance());
 
-			T::Currency::transfer(
-				&who,
-				&supersig_id,
-				deposit,
-				ExistenceRequirement::KeepAlive,
-			)?;
-            // cannot fail
-            T::Currency::reserve(&supersig_id, price)?;
+			T::Currency::transfer(&who, &supersig_id, deposit, ExistenceRequirement::KeepAlive)?;
+			// cannot fail
+			T::Currency::reserve(&supersig_id, price)?;
 
 			Supersigs::<T>::insert(index, supersig);
 			NonceSupersig::<T>::put(index + 1);
@@ -260,13 +255,13 @@ pub mod pallet {
 				return Err(Error::<T>::CallAlreadyExists.into())
 			}
 
-			let deposit = <BalanceOf<T>>::from(data.len() as u32)
-				.saturating_mul(T::PricePerBytes::get());
+			let deposit =
+				<BalanceOf<T>>::from(data.len() as u32).saturating_mul(T::PricePerBytes::get());
 
 			T::Currency::reserve(&who, deposit)?;
 
 			let preimage = PreimageCall::<T::AccountId, BalanceOf<T>> {
-				data: data.clone(),
+				data,
 				provider: who.clone(),
 				deposit,
 			};
@@ -381,13 +376,13 @@ pub mod pallet {
 			let sindex = Self::get_supersig_index_from_id(&supersig_id)
 				.ok_or(Error::<T>::SupersigNotFound)?;
 			let mut new_members = new_members;
-            // cannot fail
-            let old_members = Self::supersigs(sindex).unwrap().members;
+			// cannot fail
+			let old_members = Self::supersigs(sindex).unwrap().members;
 			new_members.retain(|memb| !old_members.contains(memb));
-            let deposit = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
-                .saturating_mul((new_members.len() as u32).into())
-                .saturating_mul(T::PricePerBytes::get());
-            T::Currency::reserve(&supersig_id, deposit)?;
+			let deposit = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
+				.saturating_mul((new_members.len() as u32).into())
+				.saturating_mul(T::PricePerBytes::get());
+			T::Currency::reserve(&supersig_id, deposit)?;
 
 			Supersigs::<T>::mutate(sindex, |wrapped_supersig| {
 				if let Some(supersig) = wrapped_supersig {
@@ -432,15 +427,15 @@ pub mod pallet {
 					supersig.members.retain(|memb| !members_to_remove.contains(memb));
 					// this will never fail, because we set provider to 1 when creating the
 					// supersig
-                    let nb_removed = old_len - supersig.members.len();
+					let nb_removed = old_len - supersig.members.len();
 					for _ in 0..(nb_removed) {
 						frame_system::Pallet::<T>::dec_consumers(&supersig_id);
 					}
 
-                    let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
-                        .saturating_mul((nb_removed as u32).into())
-                        .saturating_mul(T::PricePerBytes::get());
-                    T::Currency::unreserve(&who, reserve);
+					let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
+						.saturating_mul((nb_removed as u32).into())
+						.saturating_mul(T::PricePerBytes::get());
+					T::Currency::unreserve(&who, reserve);
 				}
 			});
 
@@ -473,15 +468,15 @@ pub mod pallet {
 
 			// cannot fail, the supersig exist
 			let nb_members = Self::supersigs(sindex).unwrap().members.len();
-            let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
-                .saturating_mul((nb_members as u32).into())
-                .saturating_mul(T::PricePerBytes::get());
+			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
+				.saturating_mul((nb_members as u32).into())
+				.saturating_mul(T::PricePerBytes::get());
 
 			let balance = T::Currency::total_balance(&supersig_id);
 			if balance != T::Currency::free_balance(&supersig_id).saturating_add(reserve) {
 				return Err(Error::<T>::CannotDeleteSupersig.into())
 			}
-            T::Currency::unreserve(&who, reserve);
+			T::Currency::unreserve(&who, reserve);
 
 			NonceCall::<T>::remove(sindex);
 			Supersigs::<T>::remove(sindex);
@@ -582,6 +577,5 @@ pub mod pallet {
 			Votes::<T>::remove(supersig_index, call_index);
 			UsersVotes::<T>::remove_prefix((supersig_index, call_index), None);
 		}
-
 	}
 }

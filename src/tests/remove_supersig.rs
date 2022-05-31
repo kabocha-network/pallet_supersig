@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::{Error, Config as SuperConfig};
+use crate::{Config as SuperConfig, Error};
 use frame_support::{
 	assert_noop, assert_ok,
 	traits::{Currency, ReservableCurrency},
@@ -33,9 +33,9 @@ fn remove_supersig() {
 		assert_eq!(Supersig::votes(0, 0), 0);
 		assert_eq!(frame_system::Pallet::<Test>::providers(&supersig_id), 0);
 
-        let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
-            .saturating_mul((3u32).into())
-            .saturating_mul(<Test as SuperConfig>::PricePerBytes::get());
+		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
+			.saturating_mul((3u32).into())
+			.saturating_mul(<Test as SuperConfig>::PricePerBytes::get());
 		assert_eq!(
 			Balances::free_balance(BOB()),
 			bob_balance + amount + Balances::minimum_balance() + reserve
