@@ -1,7 +1,7 @@
 use super::{helper::*, mock::*};
-use crate::{Error, Supersig as SupersigStruct};
+use crate::{Error, Supersig as SupersigStruct, Config as SuperConfig};
 use frame_support::{assert_noop, assert_ok, traits::Currency};
-pub use sp_std::boxed::Box;
+pub use sp_std::{boxed::Box, mem::size_of};
 
 #[test]
 fn create_supersig() {
@@ -18,6 +18,14 @@ fn create_supersig() {
 		assert_eq!(
 			Balances::free_balance(get_account_id(0)),
 			Balances::minimum_balance()
+		);
+        let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
+            .saturating_mul((3u32).into())
+            .saturating_mul(<Test as SuperConfig>::PricePerBytes::get());
+
+		assert_eq!(
+			Balances::reserved_balance(get_account_id(0)),
+            deposit
 		);
 		assert_eq!(Supersig::nonce_supersig(), 1);
 		assert_eq!(Supersig::supersigs(0).unwrap(), supersig);

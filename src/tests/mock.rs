@@ -122,7 +122,7 @@ impl pallet_supersig::Config for Test {
 	type Currency = Balances;
 	type Event = Event;
 	type PalletId = SupersigPalletId;
-	type PreimageByteDeposit = SupersigPreimageByteDeposit;
+	type PricePerBytes = SupersigPreimageByteDeposit;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
 }
 
