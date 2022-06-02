@@ -30,6 +30,10 @@ fn create_supersig() {
 			frame_system::Pallet::<Test>::providers(&get_account_id(0)),
 			1
 		);
+		assert_eq!(
+			last_event(),
+			Event::Supersig(crate::Event::SupersigCreated(get_account_id(0)))
+		);
 	});
 }
 

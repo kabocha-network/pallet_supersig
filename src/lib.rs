@@ -251,10 +251,8 @@ pub mod pallet {
 				ExistenceRequirement::AllowDeath,
 			)?;
 
-			// This mean the supersig account cannot be emptied while existing in this storage
 			frame_system::Pallet::<T>::inc_consumers(&supersig_id)?;
 
-			// cannot fail
 			T::Currency::reserve(&supersig_id, price)?;
 
 			Supersigs::<T>::insert(index, supersig);
@@ -351,7 +349,20 @@ pub mod pallet {
 			let total_votes = Self::votes(supersig_index, call_index);
 
 			if total_votes >= (supersig.members.len() as u128 / 2 + 1) {
-				Self::execute_call(supersig_index, call_index);
+				if let Some(preimage) = Self::calls(supersig_index, call_index) {
+					let supersig_id: T::AccountId =
+						T::PalletId::get().into_sub_account(supersig_index);
+					if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..]) {
+						T::Currency::unreserve(&preimage.provider, preimage.deposit);
+
+						let res = call
+							.dispatch(frame_system::RawOrigin::Signed(supersig_id.clone()).into())
+							.map(|_| ())
+							.map_err(|e| e.error);
+						Self::unchecked_remove_call(supersig_index, call_index);
+						Self::deposit_event(Event::<T>::CallExecuted(supersig_id, call_index, res));
+					}
+				}
 			}
 
 			Ok(())
@@ -409,7 +420,7 @@ pub mod pallet {
 			}
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 			let mut new_members = new_members;
-			// cannot fail
+			// cannot fail, the supersig exist
 			let old_members = Self::supersigs(supersig_index).unwrap().members;
 			new_members.retain(|memb| !old_members.contains(memb));
 			let deposit = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
@@ -506,10 +517,8 @@ pub mod pallet {
 			Votes::<T>::remove_prefix(supersig_index, None);
 			UsersVotes::<T>::remove_prefix((supersig_index,), None);
 
-			// the account exist, and there is no consumers anymore, so it cannot fail
 			frame_system::Pallet::<T>::dec_consumers(&supersig_id);
 
-			// the source account have enough funds, this cannot fail.
 			T::Currency::transfer(
 				&supersig_id,
 				&beneficiary,
@@ -566,22 +575,6 @@ pub mod pallet {
 			Self::supersigs(supersig_id)
 				.map(|supersig| supersig.members.contains(user))
 				.unwrap_or(false)
-		}
-
-		pub fn execute_call(supersig_index: u128, call_index: u128) {
-			if let Some(preimage) = Self::calls(supersig_index, call_index) {
-				let supersig_id: T::AccountId = T::PalletId::get().into_sub_account(supersig_index);
-				if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..]) {
-					T::Currency::unreserve(&preimage.provider, preimage.deposit);
-
-					let res = call
-						.dispatch(frame_system::RawOrigin::Signed(supersig_id.clone()).into())
-						.map(|_| ())
-						.map_err(|e| e.error);
-					Self::deposit_event(Event::<T>::CallExecuted(supersig_id, call_index, res));
-					Self::unchecked_remove_call(supersig_index, call_index);
-				}
-			}
 		}
 
 		pub fn unchecked_remove_call(supersig_index: u128, call_index: u128) {

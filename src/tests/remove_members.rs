@@ -13,7 +13,7 @@ fn remove_members() {
 		let supersig_id = get_account_id(0);
 		assert_ok!(Supersig::remove_members(
 			Origin::signed(supersig_id.clone()),
-			supersig_id,
+			supersig_id.clone(),
 			vec!(BOB(), CHARLIE())
 		));
 		let supersig = Supersig::supersigs(0).unwrap();
@@ -23,6 +23,13 @@ fn remove_members() {
 			.saturating_mul((supersig.members.len() as u32).into())
 			.saturating_mul(<Test as SuperConfig>::PricePerBytes::get());
 		assert_eq!(Balances::reserved_balance(get_account_id(0)), reserve);
+		assert_eq!(
+			last_event(),
+			Event::Supersig(crate::Event::UsersRemoved(
+				supersig_id,
+				vec!(BOB(), CHARLIE())
+			))
+		);
 	})
 }
 

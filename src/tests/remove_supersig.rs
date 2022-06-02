@@ -40,6 +40,10 @@ fn remove_supersig() {
 			Balances::free_balance(BOB()),
 			bob_balance + amount + Balances::minimum_balance() + reserve
 		);
+		assert_eq!(
+			last_event(),
+			Event::Supersig(crate::Event::SupersigRemoved(supersig_id))
+		);
 	})
 }
 

@@ -14,12 +14,16 @@ fn leave_supersig() {
 
 		assert_ok!(Supersig::leave_supersig(
 			Origin::signed(ALICE()),
-			supersig_id
+			supersig_id.clone()
 		));
 
 		assert_eq!(
 			Supersig::supersigs(0).unwrap().members,
 			vec!(BOB(), CHARLIE())
+		);
+		assert_eq!(
+			last_event(),
+			Event::Supersig(crate::Event::SupersigLeaved(supersig_id, ALICE()))
 		);
 	})
 }

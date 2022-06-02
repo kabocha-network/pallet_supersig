@@ -28,13 +28,17 @@ fn approve_call() {
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
-			supersig_id,
+			supersig_id.clone(),
 			0
 		));
 		assert_eq!(Supersig::votes(0, 0), 1);
 		assert!(Supersig::users_votes((0, 0, ALICE())));
 		assert!(!Supersig::users_votes((0, 0, CHARLIE())));
 		assert!(!Supersig::users_votes((0, 0, BOB())));
+		assert_eq!(
+			last_event(),
+			Event::Supersig(crate::Event::CallVoted(supersig_id, 0, ALICE()))
+		);
 	})
 }
 
@@ -73,7 +77,7 @@ fn approve_call_until_threshold() {
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
-			supersig_id,
+			supersig_id.clone(),
 			0
 		));
 
@@ -89,6 +93,10 @@ fn approve_call_until_threshold() {
 		assert_eq!(Balances::reserved_balance(ALICE()), 0);
 
 		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
+		assert_eq!(
+			last_event(),
+			Event::Supersig(crate::Event::CallExecuted(supersig_id, 0, Ok(())))
+		);
 	})
 }
 
