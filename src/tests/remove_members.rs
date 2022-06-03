@@ -9,6 +9,7 @@ fn remove_members() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 		assert_ok!(Supersig::remove_members(
@@ -39,6 +40,7 @@ fn remove_users_not_allowed() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 		assert_noop!(
@@ -54,6 +56,7 @@ fn remove_users_unknown_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let bad_supersig_id = get_account_id(1);
 		assert_noop!(
@@ -73,6 +76,7 @@ fn remove_users_leaving_0_users() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 		assert_noop!(

@@ -9,6 +9,7 @@ fn remove_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 		let bob_balance = Balances::free_balance(BOB());
@@ -50,6 +51,7 @@ fn remove_supersig_not_allowed() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 		assert_noop!(
@@ -65,6 +67,7 @@ fn remove_supersig_unknown_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let bad_supersig_id = get_account_id(1);
 		assert_noop!(
@@ -84,6 +87,7 @@ fn cannot_remove_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 		let amount = 10_000u64;
@@ -106,6 +110,7 @@ fn cannot_liquidate_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB(), CHARLIE()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 

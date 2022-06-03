@@ -9,6 +9,7 @@ fn remove_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 
@@ -43,6 +44,7 @@ fn non_allowed_remove_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 
@@ -67,6 +69,7 @@ fn remove_unknown_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 

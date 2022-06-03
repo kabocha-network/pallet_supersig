@@ -9,6 +9,7 @@ fn add_members() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 		assert_ok!(Balances::transfer(
@@ -41,6 +42,7 @@ fn add_users_not_allowed() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let supersig_id = get_account_id(0);
 		assert_noop!(
@@ -56,6 +58,7 @@ fn add_users_unknown_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec!(ALICE(), BOB()),
+			None
 		));
 		let bad_supersig_id = get_account_id(1);
 		assert_noop!(

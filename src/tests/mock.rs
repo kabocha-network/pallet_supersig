@@ -158,6 +158,15 @@ pub fn BOB() -> AccountId {
 pub fn CHARLIE() -> AccountId {
 	get_account_id_from_seed::<sr25519::Public>("Charlie")
 }
+#[allow(non_snake_case)]
+pub fn PAUL() -> AccountId {
+	get_account_id_from_seed::<sr25519::Public>("Paul")
+}
+#[allow(non_snake_case)]
+pub fn DONALD() -> AccountId {
+	get_account_id_from_seed::<sr25519::Public>("Donald")
+}
+
 pub struct ExtBuilder {
 	caps_endowed_accounts: Vec<(AccountId, u64)>,
 }
@@ -169,6 +178,8 @@ impl Default for ExtBuilder {
 				(ALICE(), 1_000_000),
 				(BOB(), 100_000),
 				(CHARLIE(), 101_000),
+				(PAUL(), 100_000),
+				(DONALD(), 100_000),
 			],
 		}
 	}

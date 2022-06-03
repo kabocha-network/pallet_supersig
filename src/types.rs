@@ -8,14 +8,32 @@ pub type BalanceOf<T> =
 #[derive(Clone, Encode, Decode, TypeInfo, Debug, PartialEq, Eq)]
 pub struct Supersig<AccountId> {
 	pub members: Vec<AccountId>,
+	master: Option<AccountId>,
 }
 
-impl<AccountId> Supersig<AccountId> {
-	pub fn new(members: Vec<AccountId>) -> Option<Self> {
+impl<AccountId: std::cmp::PartialEq + Clone> Supersig<AccountId> {
+	pub fn new(members: Vec<AccountId>, master: Option<AccountId>) -> Option<Self> {
 		if members.is_empty() {
 			return None
 		}
-		Some(Self { members })
+		if let Some(master) = master.as_ref() {
+			if !members.contains(master) {
+				return None
+			}
+		}
+		Some(Self { members, master })
+	}
+
+	pub fn master(&self) -> Option<AccountId> {
+		self.master.clone()
+	}
+
+	pub fn can_remove_member(&self, member: &AccountId) -> bool {
+		if let Some(master) = &self.master {
+			master == member
+		} else {
+			true
+		}
 	}
 }
 
@@ -24,6 +42,7 @@ pub struct PreimageCall<AccountId, Balance> {
 	pub data: Vec<u8>,
 	pub provider: AccountId,
 	pub deposit: Balance,
+	// pub master_signed: bool
 }
 
 pub type SigIndex = u128;

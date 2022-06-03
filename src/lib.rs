@@ -181,7 +181,8 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// supersig either have no member or have an invalid treshold (0)
+		/// supersig either have no member, have an invalid treshold (0) or the given master
+		/// signatory is not incuded in the given members list.
 		InvalidSupersig,
 		/// the supersig doesn't exist
 		SupersigNotFound,
@@ -219,9 +220,14 @@ pub mod pallet {
 		///   deletion
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::create_supersig())]
-		pub fn create_supersig(origin: OriginFor<T>, members: Vec<T::AccountId>) -> DispatchResult {
+		pub fn create_supersig(
+			origin: OriginFor<T>,
+			members: Vec<T::AccountId>,
+			master: Option<T::AccountId>,
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let supersig = Supersig::new(members.clone()).ok_or(Error::<T>::InvalidSupersig)?;
+			let supersig =
+				Supersig::new(members.clone(), master).ok_or(Error::<T>::InvalidSupersig)?;
 			let index = Self::nonce_supersig();
 			let supersig_id: T::AccountId = T::PalletId::get().into_sub_account(index);
 
@@ -329,9 +335,16 @@ pub mod pallet {
 			// cannot fail, as the supersig referenced by supersig_index exist (checked in
 			// get_supersig_index_from_id)
 			let supersig = Self::supersigs(supersig_index).unwrap();
+			let master = supersig.master();
 			let total_votes = Self::votes(supersig_index, call_index);
 
-			if total_votes >= (supersig.members.len() as u128 / 2 + 1) {
+			if total_votes >= (supersig.members.len() as u128 / 2 + 1)
+				|| (total_votes >= 2
+					&& master != None && Self::users_votes((
+					supersig_index,
+					call_index,
+					master.unwrap(),
+				))) {
 				if let Some(preimage) = Self::calls(supersig_index, call_index) {
 					let supersig_id: T::AccountId =
 						T::PalletId::get().into_sub_account(supersig_index);
@@ -446,7 +459,10 @@ pub mod pallet {
 			Supersigs::<T>::try_mutate(supersig_index, |wrapped_supersig| {
 				if let Some(supersig) = wrapped_supersig {
 					let old_len = supersig.members.len();
-					supersig.members.retain(|memb| !members_to_remove.contains(memb));
+					let master = supersig.master();
+					supersig.members.retain(|memb| {
+						!members_to_remove.contains(memb) && master != Some(memb.clone())
+					});
 					nb_removed = old_len - supersig.members.len();
 
 					if supersig.members.is_empty() {
@@ -539,7 +555,7 @@ pub mod pallet {
 
 			Supersigs::<T>::try_mutate(supersig_index, |wrapped_supersig| {
 				if let Some(supersig) = wrapped_supersig {
-					if supersig.members.len() <= 1 {
+					if supersig.members.len() <= 1 || supersig.master() == Some(who.clone()) {
 						return Err(())
 					}
 					supersig.members.retain(|memb| memb != &who);
