@@ -1,3 +1,10 @@
+<h1 align="center">
+  <a href="https://www.kabocha.network/">  <img src="https://avatars.githubusercontent.com/u/91527332?s=200&v=4" alt="Kabocha"></a>
+  <a href="https://github.com/rusty-crewmates"> <img src="https://avatars.githubusercontent.com/u/99248789?s=200&v=4" alt="Kabocha"></a>
+</h1>
+
+
+
 # Supersig Pallet
 
 The supersig pallet extends the capabilities of a multisig so it can be fit for governance of
