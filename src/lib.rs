@@ -449,7 +449,7 @@ pub mod pallet {
 					supersig.members.retain(|memb| !members_to_remove.contains(memb));
 					nb_removed = old_len - supersig.members.len();
 
-					if supersig.members.len() == 0 {
+					if supersig.members.is_empty() {
 						return Err(())
 					}
 				}
