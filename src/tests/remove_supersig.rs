@@ -1,9 +1,6 @@
 use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error};
-use frame_support::{
-	assert_noop, assert_ok,
-	traits::ReservableCurrency,
-};
+use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
 pub use sp_std::{boxed::Box, mem::size_of};
 
 #[test]

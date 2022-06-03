@@ -1,7 +1,7 @@
 use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Supersig as SupersigStruct};
 use frame_support::{assert_noop, assert_ok};
-pub use sp_std::{boxed::Box, mem::size_of, cmp::min};
+pub use sp_std::{boxed::Box, cmp::min, mem::size_of};
 
 #[test]
 fn create_supersig() {
@@ -15,10 +15,7 @@ fn create_supersig() {
 			vec!(ALICE(), BOB(), CHARLIE())
 		));
 
-		assert_eq!(
-			Balances::free_balance(get_account_id(0)),
-            0u64
-		);
+		assert_eq!(Balances::free_balance(get_account_id(0)), 0u64);
 		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
 			.saturating_mul((3u32).into())
 			.saturating_mul(<Test as SuperConfig>::PricePerBytes::get());
@@ -59,24 +56,12 @@ fn create_multiple_supersig() {
 		));
 		assert_eq!(Supersig::nonce_supersig(), 2);
 
-		assert_eq!(
-			Balances::free_balance(get_account_id(0)),
-            0u64
-		);
-		assert_eq!(
-			Balances::free_balance(get_account_id(1)),
-            0u64
-		);
+		assert_eq!(Balances::free_balance(get_account_id(0)), 0u64);
+		assert_eq!(Balances::free_balance(get_account_id(1)), 0u64);
 		Balances::transfer(Origin::signed(ALICE()), get_account_id(1), 10_000).unwrap();
 
-		assert_eq!(
-			Balances::free_balance(get_account_id(0)),
-            0u64
-		);
-		assert_eq!(
-			Balances::free_balance(get_account_id(1)),
-			10_000
-		);
+		assert_eq!(Balances::free_balance(get_account_id(0)), 0u64);
+		assert_eq!(Balances::free_balance(get_account_id(1)), 10_000);
 		assert_eq!(Supersig::supersigs(0).unwrap(), supersig_1);
 		assert_eq!(Supersig::supersigs(1).unwrap(), supersig_2);
 	});

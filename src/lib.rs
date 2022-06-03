@@ -185,8 +185,6 @@ pub mod pallet {
 		InvalidSupersig,
 		/// the supersig doesn't exist
 		SupersigNotFound,
-		/// the call already exists
-		CallAlreadyExists,
 		/// the call doesn't exist
 		CallNotFound,
 		/// the user is not a member of the supersig
@@ -197,8 +195,8 @@ pub mod pallet {
 		NotAllowed,
 		/// the supersig couldn't be deleted. This is due to the supersig having locked tokens
 		CannotDeleteSupersig,
-        /// an user cannot be removed if it leave 0 users in the supersig.
-        CannotRemoveUsers,
+		/// an user cannot be removed if it leave 0 users in the supersig.
+		CannotRemoveUsers,
 	}
 
 	#[pallet::call]
@@ -273,9 +271,6 @@ pub mod pallet {
 
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 			let data = call.encode();
-			if Calls::<T>::iter_prefix_values(supersig_index).any(|elem| elem.data == data) {
-				return Err(Error::<T>::CallAlreadyExists.into())
-			}
 
 			let deposit =
 				<BalanceOf<T>>::from(data.len() as u32).saturating_mul(T::PricePerBytes::get());
@@ -454,12 +449,13 @@ pub mod pallet {
 					supersig.members.retain(|memb| !members_to_remove.contains(memb));
 					nb_removed = old_len - supersig.members.len();
 
-                    if supersig.members.len() <= 0 {
-                        return Err(())
-                    }
+					if supersig.members.len() == 0 {
+						return Err(())
+					}
 				}
-                Ok(())
-			}).map_err(|_| Error::<T>::CannotRemoveUsers)?;
+				Ok(())
+			})
+			.map_err(|_| Error::<T>::CannotRemoveUsers)?;
 			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((nb_removed as u32).into())
 				.saturating_mul(T::PricePerBytes::get());
@@ -543,13 +539,14 @@ pub mod pallet {
 
 			Supersigs::<T>::try_mutate(supersig_index, |wrapped_supersig| {
 				if let Some(supersig) = wrapped_supersig {
-                    if supersig.members.len() <= 1 {
-                        return Err(())
-                    }
+					if supersig.members.len() <= 1 {
+						return Err(())
+					}
 					supersig.members.retain(|memb| memb != &who);
 				}
-                Ok(())
-			}).map_err(|_| Error::<T>::CannotRemoveUsers)?;
+				Ok(())
+			})
+			.map_err(|_| Error::<T>::CannotRemoveUsers)?;
 			Self::deposit_event(Event::<T>::SupersigLeaved(supersig_id, who));
 
 			Ok(())
