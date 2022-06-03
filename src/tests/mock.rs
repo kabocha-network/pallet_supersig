@@ -1,9 +1,7 @@
 use crate as pallet_supersig;
 use frame_support::{parameter_types, traits::Everything, PalletId};
 use frame_system as system;
-use sp_core::{
-    H256, sr25519, Public, Pair,
-};
+use sp_core::{sr25519, Pair, Public, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
@@ -16,7 +14,6 @@ type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::Accoun
 
 #[frame_support::pallet]
 pub mod nothing {
-	// use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
@@ -31,7 +28,6 @@ pub mod nothing {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Nothing {},
 	}
@@ -39,14 +35,13 @@ pub mod nothing {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1000)]
-		pub fn do_nothing(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
+		pub fn do_nothing(origin: OriginFor<T>, _nothing: Vec<u8>) -> DispatchResultWithPostInfo {
+			ensure_signed(origin)?;
 			Ok(().into())
 		}
 	}
 }
 
-// Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
 		Block = Block,
@@ -71,30 +66,30 @@ parameter_types! {
 }
 
 impl system::Config for Test {
+	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountId = AccountId;
 	type BaseCallFilter = Everything;
-	type BlockWeights = ();
+	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Call = Call;
-	type Index = u64;
 	type BlockNumber = u64;
+	type BlockWeights = ();
+	type Call = Call;
+	type DbWeight = ();
+	type Event = Event;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = SS58Prefix;
-	type OnSetCode = ();
+	type Index = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type OnKilledAccount = ();
+	type OnNewAccount = ();
+	type OnSetCode = ();
+	type Origin = Origin;
+	type PalletInfo = PalletInfo;
+	type SS58Prefix = SS58Prefix;
+	type SystemWeightInfo = ();
+	type Version = ();
 }
 
 pub type Balance = u64;
@@ -106,28 +101,29 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-	type MaxLocks = MaxLocks;
-	type Balance = Balance;
-	type Event = Event;
-	type DustRemoval = ();
-	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = ();
+	type Balance = Balance;
+	type DustRemoval = ();
+	type Event = Event;
+	type ExistentialDeposit = ExistentialDeposit;
+	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
+	type WeightInfo = ();
 }
 
 parameter_types! {
-	pub const SupersigPalletId: PalletId = PalletId(*b"id/dsupersig");
+	pub const SupersigPalletId: PalletId = PalletId(*b"id/susig");
 	pub const SupersigPreimageByteDeposit: Balance = 1000;
 }
 
 impl pallet_supersig::Config for Test {
-	type Event = Event;
+	type Call = Call;
 	type Currency = Balances;
+	type Event = Event;
 	type PalletId = SupersigPalletId;
-	// type Call = Call;
-	type SupersigPreimageByteDeposit = SupersigPreimageByteDeposit;
+	type PricePerBytes = SupersigPreimageByteDeposit;
+	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
 }
 
 pub type NoCall = nothing::Call<Test>;
@@ -136,46 +132,50 @@ type AccountPublic = <MultiSignature as Verify>::Signer;
 
 /// Helper function to generate a crypto pair from seeds
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
+	TPublic::Pair::from_string(&format!("//{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
 }
 
 /// Helper function to generate an account ID from seed
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
 /// Mock users AccountId
 #[allow(non_snake_case)]
 pub fn ALICE() -> AccountId {
-    get_account_id_from_seed::<sr25519::Public>("Alice")
+	get_account_id_from_seed::<sr25519::Public>("Alice")
 }
 #[allow(non_snake_case)]
 pub fn BOB() -> AccountId {
-    get_account_id_from_seed::<sr25519::Public>("Bob")
+	get_account_id_from_seed::<sr25519::Public>("Bob")
 }
 #[allow(non_snake_case)]
 pub fn CHARLIE() -> AccountId {
-    get_account_id_from_seed::<sr25519::Public>("Charlie")
+	get_account_id_from_seed::<sr25519::Public>("Charlie")
 }
 pub struct ExtBuilder {
-	caps_endowed_accounts: Vec<(u64, u64)>,
+	caps_endowed_accounts: Vec<(AccountId, u64)>,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		ExtBuilder {
-			caps_endowed_accounts: vec![(ALICE, 1_000_000), (BOB, 100_000), (CHARLIE, 100_000)],
+			caps_endowed_accounts: vec![
+				(ALICE(), 1_000_000),
+				(BOB(), 100_000),
+				(CHARLIE(), 101_000),
+			],
 		}
 	}
 }
 
 impl ExtBuilder {
-	pub fn balances(mut self, accounts: Vec<(u64, u64)>) -> Self {
+	pub fn balances(mut self, accounts: Vec<(AccountId, u64)>) -> Self {
 		for account in accounts {
 			self.caps_endowed_accounts.push(account);
 		}
@@ -185,9 +185,11 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		pallet_balances::GenesisConfig::<Test> { balances: self.caps_endowed_accounts }
-			.assimilate_storage(&mut t)
-			.unwrap();
+		pallet_balances::GenesisConfig::<Test> {
+			balances: self.caps_endowed_accounts,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));
