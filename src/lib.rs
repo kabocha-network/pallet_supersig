@@ -70,7 +70,7 @@ pub use frame_support::{
 pub use sp_core::Hasher;
 
 pub use sp_runtime::traits::{AccountIdConversion, Dispatchable, Hash, Saturating};
-pub use sp_std::{boxed::Box, mem::size_of, prelude::Vec};
+pub use sp_std::{boxed::Box, cmp::max, mem::size_of, prelude::Vec};
 
 pub mod types;
 pub mod weights;
@@ -197,6 +197,8 @@ pub mod pallet {
 		NotAllowed,
 		/// the supersig couldn't be deleted. This is due to the supersig having locked tokens
 		CannotDeleteSupersig,
+        /// an user cannot be removed if it leave 0 users in the supersig.
+        CannotRemoveUsers,
 	}
 
 	#[pallet::call]
@@ -228,7 +230,7 @@ pub mod pallet {
 			let price = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((members.len() as u32).into())
 				.saturating_mul(T::PricePerBytes::get());
-			let deposit = price.saturating_add(T::Currency::minimum_balance());
+			let deposit = max(T::Currency::minimum_balance(), price);
 
 			T::Currency::transfer(
 				&who,
@@ -446,13 +448,18 @@ pub mod pallet {
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 			let mut nb_removed: usize = 0;
 
-			Supersigs::<T>::mutate(supersig_index, |wrapped_supersig| {
+			Supersigs::<T>::try_mutate(supersig_index, |wrapped_supersig| {
 				if let Some(supersig) = wrapped_supersig {
 					let old_len = supersig.members.len();
 					supersig.members.retain(|memb| !members_to_remove.contains(memb));
 					nb_removed = old_len - supersig.members.len();
+
+                    if supersig.members.len() <= 0 {
+                        return Err(())
+                    }
 				}
-			});
+                Ok(())
+			}).map_err(|_| Error::<T>::CannotRemoveUsers)?;
 			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((nb_removed as u32).into())
 				.saturating_mul(T::PricePerBytes::get());
@@ -534,11 +541,15 @@ pub mod pallet {
 				return Err(Error::<T>::NotMember.into())
 			}
 
-			Supersigs::<T>::mutate(supersig_index, |wrapped_supersig| {
+			Supersigs::<T>::try_mutate(supersig_index, |wrapped_supersig| {
 				if let Some(supersig) = wrapped_supersig {
+                    if supersig.members.len() <= 1 {
+                        return Err(())
+                    }
 					supersig.members.retain(|memb| memb != &who);
 				}
-			});
+                Ok(())
+			}).map_err(|_| Error::<T>::CannotRemoveUsers)?;
 			Self::deposit_event(Event::<T>::SupersigLeaved(supersig_id, who));
 
 			Ok(())

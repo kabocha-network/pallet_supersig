@@ -2,7 +2,7 @@ use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error};
 use frame_support::{
 	assert_noop, assert_ok,
-	traits::{Currency, ReservableCurrency},
+	traits::ReservableCurrency,
 };
 pub use sp_std::{boxed::Box, mem::size_of};
 
@@ -38,7 +38,7 @@ fn remove_supersig() {
 			.saturating_mul(<Test as SuperConfig>::PricePerBytes::get());
 		assert_eq!(
 			Balances::free_balance(BOB()),
-			bob_balance + amount + Balances::minimum_balance() + reserve
+			bob_balance + amount + reserve
 		);
 		assert_eq!(
 			last_event(),

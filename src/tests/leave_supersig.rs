@@ -59,3 +59,19 @@ fn leave_unknown_supersig() {
 		);
 	})
 }
+
+#[test]
+fn leave_supersig_last_user() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			Origin::signed(ALICE()),
+			vec!(ALICE()),
+		));
+		let supersig_id = get_account_id(0);
+
+		assert_noop!(
+			Supersig::leave_supersig(Origin::signed(ALICE()), supersig_id),
+			Error::<Test>::CannotRemoveUsers
+		);
+	})
+}
