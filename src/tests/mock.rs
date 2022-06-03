@@ -35,7 +35,7 @@ pub mod nothing {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1000)]
-		pub fn do_nothing(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn do_nothing(origin: OriginFor<T>, _nothing: Vec<u8>) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 			Ok(().into())
 		}
@@ -122,7 +122,7 @@ impl pallet_supersig::Config for Test {
 	type Currency = Balances;
 	type Event = Event;
 	type PalletId = SupersigPalletId;
-	type PreimageByteDeposit = SupersigPreimageByteDeposit;
+	type PricePerBytes = SupersigPreimageByteDeposit;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
 }
 
