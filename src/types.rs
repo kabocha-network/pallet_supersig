@@ -35,6 +35,10 @@ impl<AccountId: std::cmp::PartialEq + Clone> Supersig<AccountId> {
 			true
 		}
 	}
+
+    pub fn is_user_in_supersig(&self, user: &AccountId) -> bool {
+        self.members.contains(user)
+    }
 }
 
 #[derive(Clone, Encode, Decode, TypeInfo, Debug)]

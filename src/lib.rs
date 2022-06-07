@@ -316,8 +316,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
+			let supersig = Self::supersigs(supersig_index).unwrap();
 
-			if !Self::is_user_in_supersig(supersig_index, &who) {
+			if !supersig.is_user_in_supersig(&who) {
 				return Err(Error::<T>::NotMember.into())
 			}
 			if Self::calls(supersig_index, call_index).is_none() {
@@ -334,7 +335,6 @@ pub mod pallet {
 
 			// cannot fail, as the supersig referenced by supersig_index exist (checked in
 			// get_supersig_index_from_id)
-			let supersig = Self::supersigs(supersig_index).unwrap();
 			let master = supersig.master();
 			let total_votes = Self::votes(supersig_index, call_index);
 
@@ -549,7 +549,9 @@ pub mod pallet {
 
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 
-			if !Self::is_user_in_supersig(supersig_index, &who) {
+			let supersig = Self::supersigs(supersig_index).unwrap();
+
+			if !supersig.is_user_in_supersig(&who) {
 				return Err(Error::<T>::NotMember.into())
 			}
 
@@ -579,12 +581,6 @@ pub mod pallet {
 			} else {
 				Err(Error::<T>::SupersigNotFound)
 			}
-		}
-
-		pub fn is_user_in_supersig(supersig_id: u128, user: &T::AccountId) -> bool {
-			Self::supersigs(supersig_id)
-				.map(|supersig| supersig.members.contains(user))
-				.unwrap_or(false)
 		}
 
 		pub fn unchecked_remove_call(supersig_index: u128, call_index: u128) {
