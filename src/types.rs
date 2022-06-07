@@ -10,12 +10,16 @@ pub struct Supersig<AccountId> {
 	pub members: Vec<AccountId>,
 }
 
-impl<AccountId> Supersig<AccountId> {
+impl<AccountId: sp_std::cmp::PartialEq> Supersig<AccountId> {
 	pub fn new(members: Vec<AccountId>) -> Option<Self> {
 		if members.is_empty() {
 			return None
 		}
 		Some(Self { members })
+	}
+
+	pub fn is_user_in_supersig(&self, user: &AccountId) -> bool {
+		self.members.contains(user)
 	}
 }
 
