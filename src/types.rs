@@ -1,44 +1,24 @@
 use crate::*;
 use codec::{Decode, Encode};
 use scale_info::TypeInfo;
+use frame_support::pallet_prelude::MaxEncodedLen;
 
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-#[derive(Clone, Encode, Decode, TypeInfo, Debug, PartialEq, Eq)]
-pub struct Supersig<AccountId> {
-	pub members: Vec<AccountId>,
-	master: Option<AccountId>,
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
+#[cfg_attr(feature = "std", derive(Debug))]
+#[codec(mel_bound())]
+pub enum Roles {
+    Member,
+    Master,
+    NotMember
 }
 
-impl<AccountId: std::cmp::PartialEq + Clone> Supersig<AccountId> {
-	pub fn new(members: Vec<AccountId>, master: Option<AccountId>) -> Option<Self> {
-		if members.is_empty() {
-			return None
-		}
-		if let Some(master) = master.as_ref() {
-			if !members.contains(master) {
-				return None
-			}
-		}
-		Some(Self { members, master })
-	}
-
-	pub fn master(&self) -> Option<AccountId> {
-		self.master.clone()
-	}
-
-	pub fn can_remove_member(&self, member: &AccountId) -> bool {
-		if let Some(master) = &self.master {
-			master == member
-		} else {
-			true
-		}
-	}
-
-	pub fn is_user_in_supersig(&self, user: &AccountId) -> bool {
-		self.members.contains(user)
-	}
+impl Default for Roles {
+    fn default() -> Self {
+        Roles::NotMember
+    }
 }
 
 #[derive(Clone, Encode, Decode, TypeInfo, Debug)]
