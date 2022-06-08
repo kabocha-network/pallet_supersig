@@ -3,7 +3,7 @@
   <a href="https://github.com/rusty-crewmates"> <img src="https://avatars.githubusercontent.com/u/99248789?s=200&v=4" alt="Kabocha"></a>
 </h1>
 
-Funded by Web3 foundation and Edgeware
+_Funded by Web3 foundation and Edgeware_
 
 
 
