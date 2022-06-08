@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::Error;
+use crate::{Error, Roles};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
@@ -14,8 +14,11 @@ fn approve_call() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 		let call = Call::Nothing(NoCall::do_nothing {
@@ -48,8 +51,11 @@ fn approve_call_until_threshold() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 		assert_ok!(Balances::transfer(
@@ -107,8 +113,11 @@ fn approve_call_as_master() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE(), PAUL(), DONALD()),
-			Some(BOB())
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 		assert_ok!(Balances::transfer(
@@ -166,8 +175,11 @@ fn approve_supersig_doesnt_exist() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 
@@ -191,8 +203,11 @@ fn user_already_voted() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 
@@ -221,8 +236,10 @@ fn approve_not_a_member() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 

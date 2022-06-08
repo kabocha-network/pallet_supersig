@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::Error;
+use crate::{Error, Roles};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
@@ -8,8 +8,11 @@ fn submit_calls() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 
@@ -60,8 +63,11 @@ fn submit_supersig_doesnt_exist() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let bad_supersig_id = get_account_id(1);
 

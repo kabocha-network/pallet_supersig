@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::{Config as SuperConfig, Error};
+use crate::{Config as SuperConfig, Error, Roles};
 use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
 pub use sp_std::{boxed::Box, mem::size_of};
 
@@ -8,8 +8,11 @@ fn remove_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 		let bob_balance = Balances::free_balance(BOB());
@@ -25,7 +28,7 @@ fn remove_supersig() {
 			BOB()
 		));
 
-		assert_eq!(Supersig::supersigs(0), None);
+		assert_eq!(Supersig::members_number(0), 0);
 		assert_eq!(Supersig::nonce_call(0), 0);
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Supersig::votes(0, 0), 0);
@@ -50,8 +53,11 @@ fn remove_supersig_not_allowed() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 		assert_noop!(
@@ -66,8 +72,11 @@ fn remove_supersig_unknown_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let bad_supersig_id = get_account_id(1);
 		assert_noop!(
@@ -86,8 +95,11 @@ fn cannot_remove_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 		let amount = 10_000u64;
@@ -109,8 +121,11 @@ fn cannot_liquidate_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
+			vec! {
+				(ALICE(), Roles::Member),
+				(BOB(), Roles::Member),
+				(CHARLIE(), Roles::Member),
+			},
 		));
 		let supersig_id = get_account_id(0);
 

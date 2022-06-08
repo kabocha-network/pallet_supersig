@@ -1,18 +1,17 @@
 use super::{helper::*, mock::*};
-use crate::{Config as SuperConfig, Error, Supersig as SupersigStruct};
+use crate::{Config as SuperConfig, Error, Roles};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::{boxed::Box, cmp::min, mem::size_of};
 
 #[test]
 fn create_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		let supersig = SupersigStruct::new(vec![ALICE(), BOB(), CHARLIE()], None).unwrap();
-
-		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
-		));
+		let members = vec![
+			(ALICE(), Roles::Member),
+			(BOB(), Roles::Member),
+			(CHARLIE(), Roles::Member),
+		];
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), members,));
 
 		assert_eq!(Balances::free_balance(get_account_id(0)), 0u64);
 		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
@@ -21,7 +20,10 @@ fn create_supersig() {
 
 		assert_eq!(Balances::reserved_balance(get_account_id(0)), deposit);
 		assert_eq!(Supersig::nonce_supersig(), 1);
-		assert_eq!(Supersig::supersigs(0).unwrap(), supersig);
+		assert_eq!(Supersig::members(0, ALICE()), Roles::Member);
+		assert_eq!(Supersig::members(0, BOB()), Roles::Member);
+		assert_eq!(Supersig::members(0, CHARLIE()), Roles::Member);
+		assert_eq!(Supersig::members_number(0), 3);
 		assert_eq!(
 			frame_system::Pallet::<Test>::providers(&get_account_id(0)),
 			1
@@ -36,13 +38,12 @@ fn create_supersig() {
 #[test]
 fn create_supersig_with_master() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		let supersig = SupersigStruct::new(vec![ALICE(), BOB(), CHARLIE()], Some(ALICE())).unwrap();
-
-		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			Some(ALICE())
-		));
+		let members = vec![
+			(ALICE(), Roles::Member),
+			(BOB(), Roles::Master),
+			(CHARLIE(), Roles::Master),
+		];
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), members,));
 
 		assert_eq!(Balances::free_balance(get_account_id(0)), 0u64);
 		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
@@ -51,7 +52,10 @@ fn create_supersig_with_master() {
 
 		assert_eq!(Balances::reserved_balance(get_account_id(0)), deposit);
 		assert_eq!(Supersig::nonce_supersig(), 1);
-		assert_eq!(Supersig::supersigs(0).unwrap(), supersig);
+		assert_eq!(Supersig::members(0, ALICE()), Roles::Member);
+		assert_eq!(Supersig::members(0, BOB()), Roles::Master);
+		assert_eq!(Supersig::members(0, CHARLIE()), Roles::Master);
+		assert_eq!(Supersig::members_number(0), 3);
 		assert_eq!(
 			frame_system::Pallet::<Test>::providers(&get_account_id(0)),
 			1
@@ -64,37 +68,17 @@ fn create_supersig_with_master() {
 }
 
 #[test]
-fn create_supersig_with_master_not_included() {
-	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		assert_noop!(
-			Supersig::create_supersig(
-				Origin::signed(ALICE()),
-				vec!(ALICE(), BOB(), CHARLIE()),
-				Some(PAUL())
-			),
-			Error::<Test>::InvalidSupersig
-		);
-	});
-}
-
-#[test]
 fn create_multiple_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		let supersig_1 = SupersigStruct::new(vec![ALICE(), BOB(), CHARLIE()], None).unwrap();
-		let supersig_2 = SupersigStruct::new(vec![ALICE(), BOB()], None).unwrap();
+		let members = vec![
+			(ALICE(), Roles::Member),
+			(BOB(), Roles::Member),
+			(CHARLIE(), Roles::Member),
+		];
+		let members2 = vec![(ALICE(), Roles::Member), (BOB(), Roles::Master)];
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), members,));
+		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), members2,));
 
-		assert_eq!(Supersig::nonce_supersig(), 0);
-		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
-			None
-		));
-		assert_eq!(Supersig::nonce_supersig(), 1);
-		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB()),
-			None
-		));
 		assert_eq!(Supersig::nonce_supersig(), 2);
 
 		assert_eq!(Balances::free_balance(get_account_id(0)), 0u64);
@@ -103,8 +87,16 @@ fn create_multiple_supersig() {
 
 		assert_eq!(Balances::free_balance(get_account_id(0)), 0u64);
 		assert_eq!(Balances::free_balance(get_account_id(1)), 10_000);
-		assert_eq!(Supersig::supersigs(0).unwrap(), supersig_1);
-		assert_eq!(Supersig::supersigs(1).unwrap(), supersig_2);
+
+		assert_eq!(Supersig::members(0, ALICE()), Roles::Member);
+		assert_eq!(Supersig::members(0, BOB()), Roles::Member);
+		assert_eq!(Supersig::members(0, CHARLIE()), Roles::Member);
+		assert_eq!(Supersig::members_number(0), 3);
+
+		assert_eq!(Supersig::members(1, ALICE()), Roles::Member);
+		assert_eq!(Supersig::members(1, BOB()), Roles::Master);
+		assert_eq!(Supersig::members(1, CHARLIE()), Roles::NotMember);
+		assert_eq!(Supersig::members_number(1), 2);
 	});
 }
 
@@ -112,7 +104,7 @@ fn create_multiple_supersig() {
 fn create_with_empty_list() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_noop!(
-			Supersig::create_supersig(Origin::signed(ALICE()), vec!(), None),
+			Supersig::create_supersig(Origin::signed(ALICE()), vec!()),
 			Error::<Test>::InvalidSupersig
 		);
 	});

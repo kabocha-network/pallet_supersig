@@ -1,7 +1,7 @@
 use crate::*;
 use codec::{Decode, Encode};
-use scale_info::TypeInfo;
 use frame_support::pallet_prelude::MaxEncodedLen;
+use scale_info::TypeInfo;
 
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -10,15 +10,15 @@ pub type BalanceOf<T> =
 #[cfg_attr(feature = "std", derive(Debug))]
 #[codec(mel_bound())]
 pub enum Roles {
-    Member,
-    Master,
-    NotMember
+	Member,
+	Master,
+	NotMember,
 }
 
 impl Default for Roles {
-    fn default() -> Self {
-        Roles::NotMember
-    }
+	fn default() -> Self {
+		Roles::NotMember
+	}
 }
 
 #[derive(Clone, Encode, Decode, TypeInfo, Debug)]
