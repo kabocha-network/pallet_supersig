@@ -28,7 +28,7 @@ fn remove_supersig() {
 			BOB()
 		));
 
-		assert_eq!(Supersig::members_number(0), 0);
+		assert_eq!(Supersig::total_members(0), 0);
 		assert_eq!(Supersig::nonce_call(0), 0);
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Supersig::votes(0, 0), 0);

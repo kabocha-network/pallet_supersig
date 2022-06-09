@@ -24,10 +24,10 @@ fn add_members() {
 		assert_eq!(Supersig::members(0, ALICE()), Role::Member);
 		assert_eq!(Supersig::members(0, BOB()), Role::Member);
 		assert_eq!(Supersig::members(0, CHARLIE()), Role::Member);
-		assert_eq!(Supersig::members_number(0), 3);
+		assert_eq!(Supersig::total_members(0), 3);
 
 		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
-			.saturating_mul((Supersig::members_number(0) as u32).into())
+			.saturating_mul((Supersig::total_members(0) as u32).into())
 			.saturating_mul(<Test as SuperConfig>::PricePerBytes::get());
 		assert_eq!(Balances::reserved_balance(get_account_id(0)), deposit);
 		assert_eq!(

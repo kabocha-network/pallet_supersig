@@ -21,7 +21,7 @@ fn leave_supersig() {
 			supersig_id.clone()
 		));
 		assert_eq!(Supersig::members(0, ALICE()), Role::NotMember);
-		assert_eq!(Supersig::members_number(0), 2);
+		assert_eq!(Supersig::total_members(0), 2);
 
 		assert_eq!(
 			last_event(),

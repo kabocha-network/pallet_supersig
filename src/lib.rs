@@ -120,8 +120,8 @@ pub mod pallet {
 		StorageDoubleMap<_, Blake2_256, SigIndex, Blake2_256, T::AccountId, Role, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn members_number)]
-	pub type MembersNumber<T: Config> = StorageMap<_, Blake2_256, SigIndex, u128, ValueQuery>;
+	#[pallet::getter(fn total_members)]
+	pub type TotalMembers<T: Config> = StorageMap<_, Blake2_256, SigIndex, u32, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn nonce_call)]
@@ -172,7 +172,7 @@ pub mod pallet {
 		/// a Call has been removed [supersig, call_nonce]
 		CallRemoved(T::AccountId, CallIndex),
 		/// the list of users added to the supersig. Users that were already
-		/// in the supersig wont appear [supersig, added_users]
+		/// in the supersig wont appear [supersig, [(user, role)]]
 		UsersAdded(T::AccountId, Vec<(T::AccountId, Role)>),
 		/// the list of users removed from the supersig. [supersig, removed_users]
 		UsersRemoved(T::AccountId, Vec<T::AccountId>),
@@ -227,9 +227,6 @@ pub mod pallet {
 			members: Vec<(T::AccountId, Role)>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			// let mut members = members.clone();
-			// members.sort();
-			// members.dedup();
 			let member_length = members.len();
 			if member_length < 2 {
 				return Err(Error::<T>::InvalidSupersig.into())
@@ -328,7 +325,7 @@ pub mod pallet {
 				return Err(Error::<T>::NotMember.into())
 			}
 
-			let member_number = Self::members_number(supersig_index);
+			let member_number = Self::total_members(supersig_index);
 			let vote_weight = match role {
 				Role::Member => 1,
 				Role::Master => member_number / 2,
@@ -344,12 +341,14 @@ pub mod pallet {
 			}
 
 			UsersVotes::<T>::insert((supersig_index, call_index, who.clone()), true);
-			Votes::<T>::mutate(supersig_index, call_index, |val| *val += vote_weight);
+			Votes::<T>::mutate(supersig_index, call_index, |val| {
+				*val += vote_weight as u128
+			});
 
 			Self::deposit_event(Event::<T>::CallVoted(supersig_id.clone(), call_index, who));
 
 			let total_votes = Self::votes(supersig_index, call_index);
-			if total_votes >= (member_number / 2 + 1) {
+			if total_votes >= (member_number as u128 / 2 + 1) {
 				if let Some(preimage) = Self::calls(supersig_index, call_index) {
 					if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..]) {
 						T::Currency::unreserve(&preimage.provider, preimage.deposit);
@@ -452,7 +451,7 @@ pub mod pallet {
 			}
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 
-			let nb_removed = Self::remove_from_supersig(supersig_index, members_to_remove.clone())?;
+			let nb_removed = Self::remove_users(supersig_index, members_to_remove.clone())?;
 			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((nb_removed as u32).into())
 				.saturating_mul(T::PricePerBytes::get());
@@ -485,8 +484,7 @@ pub mod pallet {
 			}
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 
-			// cannot fail, the supersig exist
-			let nb_members = Self::members_number(supersig_index);
+			let nb_members = Self::total_members(supersig_index);
 			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((nb_members as u32).into())
 				.saturating_mul(T::PricePerBytes::get());
@@ -499,7 +497,7 @@ pub mod pallet {
 
 			NonceCall::<T>::remove(supersig_index);
 			Members::<T>::remove_prefix(supersig_index, None);
-			MembersNumber::<T>::remove(supersig_index);
+			TotalMembers::<T>::remove(supersig_index);
 			Calls::<T>::remove_prefix(supersig_index, None);
 			Votes::<T>::remove_prefix(supersig_index, None);
 			UsersVotes::<T>::remove_prefix((supersig_index,), None);
@@ -534,7 +532,7 @@ pub mod pallet {
 				return Err(Error::<T>::NotMember.into())
 			}
 
-			MembersNumber::<T>::try_mutate(supersig_index, |nb| {
+			TotalMembers::<T>::try_mutate(supersig_index, |nb| {
 				if *nb - 1 <= 1 {
 					return Err(())
 				};
@@ -552,7 +550,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		pub fn get_supersig_index_from_id(id: &T::AccountId) -> Result<u128, pallet::Error<T>> {
 			if let Some((account, index)) = PalletId::try_from_sub_account(id) {
-				if account != T::PalletId::get() || Self::members_number(index) == 0 {
+				if account != T::PalletId::get() || Self::total_members(index) == 0 {
 					return Err(Error::<T>::SupersigNotFound)
 				}
 				Ok(index)
@@ -573,37 +571,37 @@ pub mod pallet {
 		) -> Vec<(T::AccountId, Role)> {
 			let mut added = Vec::new();
 			for (member, role) in members {
+				Members::<T>::insert(supersig_idx, member.clone(), role.clone());
 				if Self::members(supersig_idx, &member) == Role::NotMember {
-					Members::<T>::insert(supersig_idx, member.clone(), role.clone());
 					added.push((member, role));
 				}
 			}
-			MembersNumber::<T>::mutate(supersig_idx, |n| *n += added.len() as u128);
+			TotalMembers::<T>::mutate(supersig_idx, |n| *n += added.len() as u32);
 
 			added
 		}
 
-		pub fn remove_from_supersig(
+		pub fn remove_users(
 			supersig_idx: u128,
 			members: Vec<T::AccountId>,
-		) -> Result<u128, pallet::Error<T>> {
-			let mut number_removed = 0;
+		) -> Result<u32, pallet::Error<T>> {
+			let mut nb_removed = 0;
 
 			let mut members = members;
 			members.retain(|member| Self::members(supersig_idx, member) != Role::NotMember);
 
-			if members.len() + 1 >= Self::members_number(supersig_idx) as usize {
+			if members.len() + 1 >= Self::total_members(supersig_idx) as usize {
 				return Err(Error::<T>::CannotRemoveUsers)
 			}
 			for member in members {
 				if Self::members(supersig_idx, &member) != Role::NotMember {
 					Members::<T>::remove(supersig_idx, member);
-					number_removed += 1;
+					nb_removed += 1;
 				}
 			}
-			MembersNumber::<T>::mutate(supersig_idx, |n| *n -= number_removed);
+			TotalMembers::<T>::mutate(supersig_idx, |n| *n -= nb_removed);
 
-			Ok(number_removed)
+			Ok(nb_removed)
 		}
 	}
 }

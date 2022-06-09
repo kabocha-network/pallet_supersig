@@ -23,7 +23,7 @@ fn create_supersig() {
 		assert_eq!(Supersig::members(0, ALICE()), Role::Member);
 		assert_eq!(Supersig::members(0, BOB()), Role::Member);
 		assert_eq!(Supersig::members(0, CHARLIE()), Role::Member);
-		assert_eq!(Supersig::members_number(0), 3);
+		assert_eq!(Supersig::total_members(0), 3);
 		assert_eq!(
 			frame_system::Pallet::<Test>::providers(&get_account_id(0)),
 			1
@@ -55,7 +55,7 @@ fn create_supersig_with_master() {
 		assert_eq!(Supersig::members(0, ALICE()), Role::Member);
 		assert_eq!(Supersig::members(0, BOB()), Role::Master);
 		assert_eq!(Supersig::members(0, CHARLIE()), Role::Master);
-		assert_eq!(Supersig::members_number(0), 3);
+		assert_eq!(Supersig::total_members(0), 3);
 		assert_eq!(
 			frame_system::Pallet::<Test>::providers(&get_account_id(0)),
 			1
@@ -91,12 +91,12 @@ fn create_multiple_supersig() {
 		assert_eq!(Supersig::members(0, ALICE()), Role::Member);
 		assert_eq!(Supersig::members(0, BOB()), Role::Member);
 		assert_eq!(Supersig::members(0, CHARLIE()), Role::Member);
-		assert_eq!(Supersig::members_number(0), 3);
+		assert_eq!(Supersig::total_members(0), 3);
 
 		assert_eq!(Supersig::members(1, ALICE()), Role::Member);
 		assert_eq!(Supersig::members(1, BOB()), Role::Master);
 		assert_eq!(Supersig::members(1, CHARLIE()), Role::NotMember);
-		assert_eq!(Supersig::members_number(1), 2);
+		assert_eq!(Supersig::total_members(1), 2);
 	});
 }
 

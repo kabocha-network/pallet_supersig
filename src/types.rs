@@ -10,9 +10,9 @@ pub type BalanceOf<T> =
 #[cfg_attr(feature = "std", derive(Debug))]
 #[codec(mel_bound())]
 pub enum Role {
+	NotMember,
 	Member,
 	Master,
-	NotMember,
 }
 
 impl Default for Role {
