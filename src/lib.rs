@@ -571,10 +571,10 @@ pub mod pallet {
 		) -> Vec<(T::AccountId, Role)> {
 			let mut added = Vec::new();
 			for (member, role) in members {
-				Members::<T>::insert(supersig_idx, member.clone(), role.clone());
 				if Self::members(supersig_idx, &member) == Role::NotMember {
-					added.push((member, role));
+					added.push((member.clone(), role.clone()));
 				}
+				Members::<T>::insert(supersig_idx, member, role);
 			}
 			TotalMembers::<T>::mutate(supersig_idx, |n| *n += added.len() as u32);
 

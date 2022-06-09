@@ -22,7 +22,7 @@ fn add_members() {
 		));
 
 		assert_eq!(Supersig::members(0, ALICE()), Role::Member);
-		assert_eq!(Supersig::members(0, BOB()), Role::Member);
+		assert_eq!(Supersig::members(0, BOB()), Role::Master);
 		assert_eq!(Supersig::members(0, CHARLIE()), Role::Member);
 		assert_eq!(Supersig::total_members(0), 3);
 
