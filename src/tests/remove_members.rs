@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::{Config as SuperConfig, Error, Roles};
+use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::{boxed::Box, mem::size_of};
 
@@ -9,10 +9,10 @@ fn remove_members() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
-				(PAUL(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
+				(PAUL(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -21,10 +21,10 @@ fn remove_members() {
 			supersig_id.clone(),
 			vec!(BOB(), CHARLIE())
 		));
-		assert_eq!(Supersig::members(0, ALICE()), Roles::Member);
-		assert_eq!(Supersig::members(0, BOB()), Roles::NotMember);
-		assert_eq!(Supersig::members(0, CHARLIE()), Roles::NotMember);
-		assert_eq!(Supersig::members(0, PAUL()), Roles::Member);
+		assert_eq!(Supersig::members(0, ALICE()), Role::Member);
+		assert_eq!(Supersig::members(0, BOB()), Role::NotMember);
+		assert_eq!(Supersig::members(0, CHARLIE()), Role::NotMember);
+		assert_eq!(Supersig::members(0, PAUL()), Role::Member);
 		assert_eq!(Supersig::members_number(0), 2);
 
 		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
@@ -47,10 +47,10 @@ fn remove_users_not_allowed() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
-				(PAUL(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
+				(PAUL(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -67,10 +67,10 @@ fn remove_users_unknown_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
-				(PAUL(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
+				(PAUL(), Role::Member),
 			},
 		));
 		let bad_supersig_id = get_account_id(1);
@@ -91,9 +91,9 @@ fn remove_users_leaving_1_users() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);

@@ -117,17 +117,11 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	pub type Members<T: Config> =
-		StorageDoubleMap<_, Blake2_256, SigIndex, Blake2_256, T::AccountId, Roles, ValueQuery>;
+		StorageDoubleMap<_, Blake2_256, SigIndex, Blake2_256, T::AccountId, Role, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn members_number)]
 	pub type MembersNumber<T: Config> = StorageMap<_, Blake2_256, SigIndex, u128, ValueQuery>;
-
-	// #[pallet::storage]
-	// #[pallet::unbounded]
-	// #[pallet::getter(fn supersigs)]
-	// pub type Supersigs<T: Config> =
-	// 	StorageMap<_, Blake2_256, SigIndex, Supersig<T::AccountId>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn nonce_call)]
@@ -179,7 +173,7 @@ pub mod pallet {
 		CallRemoved(T::AccountId, CallIndex),
 		/// the list of users added to the supersig. Users that were already
 		/// in the supersig wont appear [supersig, added_users]
-		UsersAdded(T::AccountId, Vec<(T::AccountId, Roles)>),
+		UsersAdded(T::AccountId, Vec<(T::AccountId, Role)>),
 		/// the list of users removed from the supersig. [supersig, removed_users]
 		UsersRemoved(T::AccountId, Vec<T::AccountId>),
 		/// a supersig have been removed [supersig_id]
@@ -190,8 +184,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// supersig either have no member, have an invalid treshold (0) or the given master
-		/// signatory is not incuded in the given members list.
+		/// supersig have not enough members (minimum 2 members)
 		InvalidSupersig,
 		/// the supersig doesn't exist
 		SupersigNotFound,
@@ -231,7 +224,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create_supersig())]
 		pub fn create_supersig(
 			origin: OriginFor<T>,
-			members: Vec<(T::AccountId, Roles)>,
+			members: Vec<(T::AccountId, Role)>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			// let mut members = members.clone();
@@ -331,18 +324,18 @@ pub mod pallet {
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 
 			let role = Self::members(supersig_index, &who);
-			if role == Roles::NotMember {
+			if role == Role::NotMember {
 				return Err(Error::<T>::NotMember.into())
 			}
 
 			let member_number = Self::members_number(supersig_index);
 			let vote_weight = match role {
-				Roles::Member => 1,
-				Roles::Master => member_number / 2,
+				Role::Member => 1,
+				Role::Master => member_number / 2,
 				_ => return Err(Error::<T>::NotMember.into()),
 			};
 
-			if role == Roles::NotMember {}
+			if role == Role::NotMember {}
 			if Self::calls(supersig_index, call_index).is_none() {
 				return Err(Error::<T>::CallNotFound.into())
 			}
@@ -418,7 +411,7 @@ pub mod pallet {
 		pub fn add_members(
 			origin: OriginFor<T>,
 			supersig_id: T::AccountId,
-			new_members: Vec<(T::AccountId, Roles)>,
+			new_members: Vec<(T::AccountId, Role)>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			if who != supersig_id {
@@ -537,7 +530,7 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
-			if Self::members(supersig_index, &who) == Roles::NotMember {
+			if Self::members(supersig_index, &who) == Role::NotMember {
 				return Err(Error::<T>::NotMember.into())
 			}
 
@@ -576,11 +569,11 @@ pub mod pallet {
 
 		pub fn add_to_supersig(
 			supersig_idx: u128,
-			members: Vec<(T::AccountId, Roles)>,
-		) -> Vec<(T::AccountId, Roles)> {
+			members: Vec<(T::AccountId, Role)>,
+		) -> Vec<(T::AccountId, Role)> {
 			let mut added = Vec::new();
 			for (member, role) in members {
-				if Self::members(supersig_idx, &member) == Roles::NotMember {
+				if Self::members(supersig_idx, &member) == Role::NotMember {
 					Members::<T>::insert(supersig_idx, member.clone(), role.clone());
 					added.push((member, role));
 				}
@@ -597,13 +590,13 @@ pub mod pallet {
 			let mut number_removed = 0;
 
 			let mut members = members;
-			members.retain(|member| Self::members(supersig_idx, member) != Roles::NotMember);
+			members.retain(|member| Self::members(supersig_idx, member) != Role::NotMember);
 
 			if members.len() + 1 >= Self::members_number(supersig_idx) as usize {
 				return Err(Error::<T>::CannotRemoveUsers)
 			}
 			for member in members {
-				if Self::members(supersig_idx, &member) != Roles::NotMember {
+				if Self::members(supersig_idx, &member) != Role::NotMember {
 					Members::<T>::remove(supersig_idx, member);
 					number_removed += 1;
 				}

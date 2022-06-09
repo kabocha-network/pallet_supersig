@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::{Error, Roles};
+use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
@@ -15,9 +15,9 @@ fn approve_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -52,9 +52,9 @@ fn approve_call_until_threshold() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -114,9 +114,9 @@ fn approve_call_as_master() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -176,9 +176,9 @@ fn approve_supersig_doesnt_exist() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -204,9 +204,9 @@ fn user_already_voted() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -237,8 +237,8 @@ fn approve_not_a_member() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);

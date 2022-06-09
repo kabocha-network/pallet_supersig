@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::{Error, Roles};
+use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
@@ -9,9 +9,9 @@ fn remove_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -47,9 +47,9 @@ fn non_allowed_remove_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -75,9 +75,9 @@ fn remove_unknown_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);

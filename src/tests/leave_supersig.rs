@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::{Error, Roles};
+use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
@@ -9,9 +9,9 @@ fn leave_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -20,7 +20,7 @@ fn leave_supersig() {
 			Origin::signed(ALICE()),
 			supersig_id.clone()
 		));
-		assert_eq!(Supersig::members(0, ALICE()), Roles::NotMember);
+		assert_eq!(Supersig::members(0, ALICE()), Role::NotMember);
 		assert_eq!(Supersig::members_number(0), 2);
 
 		assert_eq!(
@@ -36,8 +36,8 @@ fn leave_supersig_not_a_member() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -55,9 +55,9 @@ fn leave_unknown_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let bad_supersig_id = get_account_id(1);
@@ -75,8 +75,8 @@ fn leave_supersig_last_user() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);

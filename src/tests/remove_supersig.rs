@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::{Config as SuperConfig, Error, Roles};
+use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
 pub use sp_std::{boxed::Box, mem::size_of};
 
@@ -9,9 +9,9 @@ fn remove_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -54,9 +54,9 @@ fn remove_supersig_not_allowed() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -73,9 +73,9 @@ fn remove_supersig_unknown_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let bad_supersig_id = get_account_id(1);
@@ -96,9 +96,9 @@ fn cannot_remove_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -122,9 +122,9 @@ fn cannot_liquidate_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Roles::Member),
-				(BOB(), Roles::Member),
-				(CHARLIE(), Roles::Member),
+				(ALICE(), Role::Member),
+				(BOB(), Role::Member),
+				(CHARLIE(), Role::Member),
 			},
 		));
 		let supersig_id = get_account_id(0);

@@ -9,15 +9,15 @@ pub type BalanceOf<T> =
 #[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen)]
 #[cfg_attr(feature = "std", derive(Debug))]
 #[codec(mel_bound())]
-pub enum Roles {
+pub enum Role {
 	Member,
 	Master,
 	NotMember,
 }
 
-impl Default for Roles {
+impl Default for Role {
 	fn default() -> Self {
-		Roles::NotMember
+		Role::NotMember
 	}
 }
 
@@ -26,7 +26,6 @@ pub struct PreimageCall<AccountId, Balance> {
 	pub data: Vec<u8>,
 	pub provider: AccountId,
 	pub deposit: Balance,
-	// pub master_signed: bool
 }
 
 pub type SigIndex = u128;
