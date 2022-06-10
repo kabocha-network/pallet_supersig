@@ -45,7 +45,7 @@
 //! - `remove_members` - remove members from the supersig. In case some user are not in the
 //!   supersig, they will be ignored.
 //!
-//! - `remove_supersig` - remove the supersig and all the associated data. Funds will be unreserved
+//! - `delete_supersig` - remove the supersig and all the associated data. Funds will be unreserved
 //!   and transfered to specified beneficiary.
 //!
 //! - `leave_supersig` - remove the caller from the supersig.
@@ -65,7 +65,7 @@ pub use frame_support::{
 	traits::{tokens::ExistenceRequirement, Currency, ReservableCurrency},
 	transactional,
 	weights::{GetDispatchInfo, PostDispatchInfo},
-	PalletId,
+PalletId,
 };
 pub use sp_core::Hasher;
 
@@ -105,7 +105,7 @@ pub mod pallet {
 
 		/// The amount of balance that must be deposited per bytes stored.
 		#[pallet::constant]
-		type PricePerBytes: Get<BalanceOf<Self>>;
+		type PricePerByte: Get<BalanceOf<Self>>;
 
 		///the maximum users allowed per transaction (adding, removing...)
 		#[pallet::constant]
@@ -148,7 +148,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn votes)]
 	pub type Votes<T: Config> =
-		StorageDoubleMap<_, Blake2_256, SigIndex, Blake2_256, CallIndex, u128, ValueQuery>;
+		StorageDoubleMap<_, Blake2_256, SigIndex, Blake2_256, CallIndex, u32, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn users_votes)]
@@ -202,11 +202,9 @@ pub mod pallet {
 		/// the signatory is not the supersig.
 		NotAllowed,
 		/// the supersig couldn't be deleted. This is due to the supersig having locked tokens
-		CannotDeleteSupersig,
+		SupersigHaveLockedFunds,
 		/// an user cannot be removed if it leave 0 users in the supersig.
 		CannotRemoveUsers,
-		/// too much users are passed in the extrinsic. The maximum is defined by the config.
-		TooManyUsers,
 	}
 
 	#[pallet::call]
@@ -217,7 +215,7 @@ pub mod pallet {
 		/// currencies from the creator to the generated supersig:
 		///     - the existencial deposit (minimum amount to make an account alive)
 		///     - the price corresponding to the size (in bytes) of the members times the
-		///       PricePerBytes
+		///       PricePerByte
 		///
 		/// The dispatch origin for this call must be `Signed`.
 		///
@@ -231,13 +229,10 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create_supersig(members.len() as u32))]
 		pub fn create_supersig(
 			origin: OriginFor<T>,
-			members: Vec<(T::AccountId, Role)>,
+			members: BoundedVec<(T::AccountId, Role), T::MaxUsersPerTransaction>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let member_length = members.len();
-			if member_length > T::MaxUsersPerTransaction::get() as usize {
-				return Err(Error::<T>::TooManyUsers.into())
-			}
 			if member_length < 1 {
 				return Err(Error::<T>::InvalidSupersig.into())
 			}
@@ -246,7 +241,7 @@ pub mod pallet {
 
 			let price = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((member_length as u32).into())
-				.saturating_mul(T::PricePerBytes::get());
+				.saturating_mul(T::PricePerByte::get());
 			let deposit = max(T::Currency::minimum_balance(), price);
 
 			T::Currency::transfer(
@@ -292,7 +287,7 @@ pub mod pallet {
 			let data = call.encode();
 
 			let deposit =
-				<BalanceOf<T>>::from(data.len() as u32).saturating_mul(T::PricePerBytes::get());
+				<BalanceOf<T>>::from(data.len() as u32).saturating_mul(T::PricePerByte::get());
 			T::Currency::reserve(&who, deposit)?;
 
 			let preimage = PreimageCall::<T::AccountId, BalanceOf<T>> {
@@ -352,13 +347,13 @@ pub mod pallet {
 
 			UsersVotes::<T>::insert((supersig_index, call_index, who.clone()), true);
 			Votes::<T>::mutate(supersig_index, call_index, |val| {
-				*val += vote_weight as u128
+				*val += vote_weight
 			});
 
 			Self::deposit_event(Event::<T>::CallVoted(supersig_id.clone(), call_index, who));
 
 			let total_votes = Self::votes(supersig_index, call_index);
-			if total_votes >= (member_number as u128 / 2 + 1) {
+			if total_votes >= (member_number / 2 + 1) {
 				if let Some(preimage) = Self::calls(supersig_index, call_index) {
 					if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..]) {
 						T::Currency::unreserve(&preimage.provider, preimage.deposit);
@@ -420,14 +415,11 @@ pub mod pallet {
 		pub fn add_members(
 			origin: OriginFor<T>,
 			supersig_id: T::AccountId,
-			new_members: Vec<(T::AccountId, Role)>,
+			new_members: BoundedVec<(T::AccountId, Role), T::MaxUsersPerTransaction>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			if who != supersig_id {
 				return Err(Error::<T>::NotAllowed.into())
-			}
-			if new_members.len() > T::MaxUsersPerTransaction::get() as usize {
-				return Err(Error::<T>::TooManyUsers.into())
 			}
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 			let new_members = new_members;
@@ -436,7 +428,7 @@ pub mod pallet {
 
 			let deposit = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((added.len() as u32).into())
-				.saturating_mul(T::PricePerBytes::get());
+				.saturating_mul(T::PricePerByte::get());
 			T::Currency::reserve(&supersig_id, deposit)?;
 
 			Self::deposit_event(Event::<T>::UsersAdded(supersig_id, added));
@@ -456,21 +448,18 @@ pub mod pallet {
 		pub fn remove_members(
 			origin: OriginFor<T>,
 			supersig_id: T::AccountId,
-			members_to_remove: Vec<T::AccountId>,
+			members_to_remove: BoundedVec<T::AccountId, T::MaxUsersPerTransaction>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			if who != supersig_id {
 				return Err(Error::<T>::NotAllowed.into())
-			}
-			if members_to_remove.len() > T::MaxUsersPerTransaction::get() as usize {
-				return Err(Error::<T>::TooManyUsers.into())
 			}
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 
 			let removed = Self::internal_remove_members(supersig_index, members_to_remove)?;
 			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((removed.len() as u32).into())
-				.saturating_mul(T::PricePerBytes::get());
+				.saturating_mul(T::PricePerByte::get());
 			T::Currency::unreserve(&who, reserve);
 
 			Self::deposit_event(Event::<T>::UsersRemoved(supersig_id, removed));
@@ -480,7 +469,7 @@ pub mod pallet {
 
 		/// remove the supersig
 		///
-		/// `remove_supersig` will remove every members, transfer every remanent funds to the
+		/// `delete_supersig` will remove every members, transfer every remanent funds to the
 		/// target account, remove the supersig from storage, and set the consumers and providers
 		/// to 0
 		///
@@ -488,8 +477,8 @@ pub mod pallet {
 		///
 		/// # <weight>
 		#[transactional]
-		#[pallet::weight(T::WeightInfo::remove_supersig())]
-		pub fn remove_supersig(
+		#[pallet::weight(T::WeightInfo::delete_supersig())]
+		pub fn delete_supersig(
 			origin: OriginFor<T>,
 			supersig_id: T::AccountId,
 			beneficiary: T::AccountId,
@@ -503,13 +492,17 @@ pub mod pallet {
 			let nb_members = Self::total_members(supersig_index);
 			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((nb_members as u32).into())
-				.saturating_mul(T::PricePerBytes::get());
+				.saturating_mul(T::PricePerByte::get());
 
-			let balance = T::Currency::total_balance(&supersig_id);
-			if balance != T::Currency::free_balance(&supersig_id).saturating_add(reserve) {
-				return Err(Error::<T>::CannotDeleteSupersig.into())
+			let total_balance = T::Currency::total_balance(&supersig_id);
+			if total_balance != T::Currency::free_balance(&supersig_id).saturating_add(reserve) {
+				return Err(Error::<T>::SupersigHaveLockedFunds.into())
 			}
 			T::Currency::unreserve(&who, reserve);
+
+            Calls::<T>::iter_prefix_values(supersig_index).for_each(|preimage| {
+			    T::Currency::unreserve(&preimage.provider, preimage.deposit);
+            });
 
 			NonceCall::<T>::remove(supersig_index);
 			Members::<T>::remove_prefix(supersig_index, None);
@@ -523,7 +516,7 @@ pub mod pallet {
 			T::Currency::transfer(
 				&supersig_id,
 				&beneficiary,
-				balance,
+				total_balance,
 				ExistenceRequirement::AllowDeath,
 			)?;
 
@@ -549,13 +542,12 @@ pub mod pallet {
 			}
 
 			TotalMembers::<T>::try_mutate(supersig_index, |nb| {
-				if *nb - 1 <= 1 {
-					return Err(())
+				if *nb - 1 == 0 {
+					return Err(Error::<T>::CannotRemoveUsers)
 				};
 				*nb -= 1;
 				Ok(*nb)
-			})
-			.map_err(|_| Error::<T>::CannotRemoveUsers)?;
+			})?;
 			Members::<T>::remove(supersig_index, &who);
 			Self::deposit_event(Event::<T>::SupersigLeaved(supersig_id, who));
 
@@ -583,7 +575,7 @@ pub mod pallet {
 
 		pub fn internal_add_members(
 			supersig_idx: u128,
-			members: Vec<(T::AccountId, Role)>,
+			members: BoundedVec<(T::AccountId, Role), T::MaxUsersPerTransaction>,
 		) -> Vec<(T::AccountId, Role)> {
 			let mut added = Vec::new();
 			for (member, role) in members {
@@ -600,7 +592,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn internal_remove_members(
 			supersig_idx: u128,
-			members: Vec<T::AccountId>,
+			members: BoundedVec<T::AccountId, T::MaxUsersPerTransaction>,
 		) -> Result<Vec<T::AccountId>, pallet::Error<T>> {
 			let mut removed = Vec::new();
 

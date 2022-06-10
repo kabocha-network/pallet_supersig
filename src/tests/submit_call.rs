@@ -1,5 +1,6 @@
 use super::{helper::*, mock::*};
-use crate::{Error, Role};
+use crate::{Error, Role, Config as SuperConfig};
+use codec::Encode;
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
 
@@ -29,8 +30,11 @@ fn submit_calls() {
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_id.clone(),
-			Box::new(call)
+			Box::new(call.clone())
 		));
+        let deposit =
+            Balance::from(call.encode().len() as u32).saturating_mul(<Test as SuperConfig>::PricePerByte::get());
+		assert_eq!(Balances::reserved_balance(ALICE()), deposit);
 		assert_eq!(Supersig::nonce_call(0), 1);
 		assert_eq!(
 			last_event(),

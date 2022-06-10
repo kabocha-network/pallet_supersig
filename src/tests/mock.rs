@@ -124,7 +124,7 @@ impl pallet_supersig::Config for Test {
 	type Event = Event;
 	type MaxUsersPerTransaction = MaxUsersPerTransaction;
 	type PalletId = SupersigPalletId;
-	type PricePerBytes = SupersigPreimageByteDeposit;
+	type PricePerByte = SupersigPreimageByteDeposit;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
 }
 

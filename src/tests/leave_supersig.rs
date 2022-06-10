@@ -76,7 +76,6 @@ fn leave_supersig_last_user() {
 			Origin::signed(ALICE()),
 			vec! {
 				(ALICE(), Role::Standard),
-				(BOB(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);

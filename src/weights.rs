@@ -37,7 +37,7 @@ pub trait WeightInfo {
     fn remove_call() -> Weight;
     fn add_members(z: u32) -> Weight;
     fn remove_members(z: u32) -> Weight;
-    fn remove_supersig() -> Weight;
+    fn delete_supersig() -> Weight;
     fn leave_supersig() -> Weight;
 }
 
@@ -117,7 +117,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System Account (r:2 w:2)
 	// Storage: Supersig Supersigs (r:1 w:1)
 	// Storage: Supersig NonceCall (r:0 w:1)
-	fn remove_supersig() -> Weight {
+	fn delete_supersig() -> Weight {
 		(107_739_000u64)
 			.saturating_add(T::DbWeight::get().reads(4u64))
 			.saturating_add(T::DbWeight::get().writes(4u64))
