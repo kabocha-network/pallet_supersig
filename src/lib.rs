@@ -228,7 +228,7 @@ pub mod pallet {
 		/// - `frame_system::inc_consumers` will be called once to protect the supersig from
 		///   deletion
 		#[transactional]
-		#[pallet::weight(T::WeightInfo::create_supersig())]
+		#[pallet::weight(T::WeightInfo::create_supersig(members.len() as u32))]
 		pub fn create_supersig(
 			origin: OriginFor<T>,
 			members: Vec<(T::AccountId, Role)>,
@@ -539,7 +539,7 @@ pub mod pallet {
 		///
 		/// # <weight>
 		#[transactional]
-		#[pallet::weight(T::WeightInfo::create_supersig())]
+		#[pallet::weight(T::WeightInfo::leave_supersig())]
 		pub fn leave_supersig(origin: OriginFor<T>, supersig_id: T::AccountId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
