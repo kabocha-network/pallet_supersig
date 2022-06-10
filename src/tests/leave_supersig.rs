@@ -64,7 +64,7 @@ fn leave_unknown_supersig() {
 
 		assert_noop!(
 			Supersig::leave_supersig(Origin::signed(CHARLIE()), bad_supersig_id),
-			Error::<Test>::SupersigNotFound
+			Error::<Test>::NotSupersig
 		);
 	})
 }
@@ -82,7 +82,7 @@ fn leave_supersig_last_user() {
 
 		assert_noop!(
 			Supersig::leave_supersig(Origin::signed(ALICE()), supersig_id),
-			Error::<Test>::CannotRemoveUsers
+			Error::<Test>::InvalidNumberOfMembers
 		);
 	})
 }

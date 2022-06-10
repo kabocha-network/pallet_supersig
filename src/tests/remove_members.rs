@@ -29,7 +29,7 @@ fn remove_members() {
 
 		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
 			.saturating_mul((Supersig::total_members(0) as u32).into())
-			.saturating_mul(<Test as SuperConfig>::PricePerByte::get());
+			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
 		assert_eq!(Balances::reserved_balance(get_account_id(0)), reserve);
 		assert_eq!(
 			last_event(),
@@ -80,7 +80,7 @@ fn remove_users_unknown_supersig() {
 				bad_supersig_id,
 				vec!(BOB(), CHARLIE())
 			),
-			Error::<Test>::SupersigNotFound
+			Error::<Test>::NotSupersig
 		);
 	})
 }
@@ -102,7 +102,7 @@ fn remove_users_leaving_0_users() {
 				supersig_id,
 				vec!(ALICE(), BOB())
 			),
-			Error::<Test>::CannotRemoveUsers
+			Error::<Test>::InvalidNumberOfMembers
 		);
 	})
 }

@@ -36,9 +36,9 @@ fn approve_call() {
 			0
 		));
 		assert_eq!(Supersig::votes(0, 0), 1);
-		assert!(Supersig::users_votes((0, 0, ALICE())));
-		assert!(!Supersig::users_votes((0, 0, CHARLIE())));
-		assert!(!Supersig::users_votes((0, 0, BOB())));
+		assert!(Supersig::members_votes((0, 0, ALICE())));
+		assert!(!Supersig::members_votes((0, 0, CHARLIE())));
+		assert!(!Supersig::members_votes((0, 0, BOB())));
 		assert_eq!(
 			last_event(),
 			Event::Supersig(crate::Event::CallVoted(supersig_id, 0, ALICE()))
@@ -93,9 +93,9 @@ fn approve_call_until_threshold() {
 		// storage
 
 		assert_eq!(Supersig::votes(0, 0), 0);
-		assert!(!Supersig::users_votes((0, 0, ALICE())));
-		assert!(!Supersig::users_votes((0, 0, BOB())));
-		assert!(!Supersig::users_votes((0, 0, CHARLIE())));
+		assert!(!Supersig::members_votes((0, 0, ALICE())));
+		assert!(!Supersig::members_votes((0, 0, BOB())));
+		assert!(!Supersig::members_votes((0, 0, CHARLIE())));
 
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Balances::reserved_balance(ALICE()), 0);
@@ -155,9 +155,9 @@ fn approve_call_as_master() {
 		// storage
 
 		assert_eq!(Supersig::votes(0, 0), 0);
-		assert!(!Supersig::users_votes((0, 0, ALICE())));
-		assert!(!Supersig::users_votes((0, 0, BOB())));
-		assert!(!Supersig::users_votes((0, 0, CHARLIE())));
+		assert!(!Supersig::members_votes((0, 0, ALICE())));
+		assert!(!Supersig::members_votes((0, 0, BOB())));
+		assert!(!Supersig::members_votes((0, 0, CHARLIE())));
 
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Balances::reserved_balance(ALICE()), 0);
@@ -193,7 +193,7 @@ fn approve_supersig_doesnt_exist() {
 		));
 		assert_noop!(
 			Supersig::approve_call(Origin::signed(CHARLIE()), get_account_id(3), 0),
-			Error::<Test>::SupersigNotFound
+			Error::<Test>::NotSupersig
 		);
 	})
 }

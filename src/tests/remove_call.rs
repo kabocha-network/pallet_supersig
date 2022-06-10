@@ -32,8 +32,8 @@ fn remove_call() {
 		));
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Supersig::votes(0, 0), 0);
-		assert!(!Supersig::users_votes((0, 0, CHARLIE())));
-		assert!(!Supersig::users_votes((0, 0, BOB())));
+		assert!(!Supersig::members_votes((0, 0, CHARLIE())));
+		assert!(!Supersig::members_votes((0, 0, BOB())));
 		assert_eq!(
 			last_event(),
 			Event::Supersig(crate::Event::CallRemoved(supersig_id, 0))

@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::{Error, Role, Config as SuperConfig};
+use crate::{Config as SuperConfig, Error, Role};
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
@@ -32,8 +32,8 @@ fn submit_calls() {
 			supersig_id.clone(),
 			Box::new(call.clone())
 		));
-        let deposit =
-            Balance::from(call.encode().len() as u32).saturating_mul(<Test as SuperConfig>::PricePerByte::get());
+		let deposit = Balance::from(call.encode().len() as u32)
+			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
 		assert_eq!(Balances::reserved_balance(ALICE()), deposit);
 		assert_eq!(Supersig::nonce_call(0), 1);
 		assert_eq!(
@@ -80,7 +80,7 @@ fn submit_supersig_doesnt_exist() {
 		});
 		assert_noop!(
 			Supersig::submit_call(Origin::signed(CHARLIE()), bad_supersig_id, Box::new(call)),
-			Error::<Test>::SupersigNotFound
+			Error::<Test>::NotSupersig
 		);
 	})
 }

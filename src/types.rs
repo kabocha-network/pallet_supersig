@@ -27,5 +27,5 @@ pub struct PreimageCall<AccountId, Balance> {
 	pub deposit: Balance,
 }
 
-pub type SigIndex = u128;
-pub type CallIndex = u128;
+pub type SupersigId = u128;
+pub type CallId = u128;

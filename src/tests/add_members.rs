@@ -28,7 +28,7 @@ fn add_members() {
 
 		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
 			.saturating_mul((Supersig::total_members(0) as u32).into())
-			.saturating_mul(<Test as SuperConfig>::PricePerByte::get());
+			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
 		assert_eq!(Balances::reserved_balance(get_account_id(0)), deposit);
 		assert_eq!(
 			last_event(),
@@ -71,7 +71,7 @@ fn add_users_unknown_supersig() {
 				bad_supersig_id,
 				members
 			),
-			Error::<Test>::SupersigNotFound
+			Error::<Test>::NotSupersig
 		);
 	})
 }

@@ -36,7 +36,7 @@ fn delete_supersig() {
 
 		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
 			.saturating_mul((3u32).into())
-			.saturating_mul(<Test as SuperConfig>::PricePerByte::get());
+			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
 		assert_eq!(
 			Balances::free_balance(BOB()),
 			bob_balance + amount + reserve
@@ -89,7 +89,7 @@ fn delete_supersig_with_call() {
 
 		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
 			.saturating_mul((3u32).into())
-			.saturating_mul(<Test as SuperConfig>::PricePerByte::get());
+			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
 		assert_eq!(
 			Balances::free_balance(BOB()),
 			bob_balance + amount + reserve
@@ -139,7 +139,7 @@ fn delete_supersig_unknown_supersig() {
 				bad_supersig_id,
 				BOB()
 			),
-			Error::<Test>::SupersigNotFound
+			Error::<Test>::NotSupersig
 		);
 	})
 }

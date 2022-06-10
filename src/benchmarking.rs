@@ -53,7 +53,7 @@ benchmarks! {
 
 		assert_ok!(
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
-			members.clone())
+			members)
 		);
 	}: _(RawOrigin::Signed(alice.clone()), supersig_id, Box::new(call))
 	verify {
@@ -78,7 +78,7 @@ benchmarks! {
 
 		assert_ok!(
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
-			members.clone())
+			members)
 		);
 		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
 		assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice).into(), supersig_id.clone(), 0));
@@ -106,7 +106,7 @@ benchmarks! {
 
 		assert_ok!(
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
-			members.clone())
+			members)
 		);
 		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
 		assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), 0));
@@ -179,8 +179,8 @@ benchmarks! {
 		let members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob.clone(), Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
 
 		assert_ok!(
-			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
-			members.clone())
+			Pallet::<T>::create_supersig(RawOrigin::Signed(alice).into(),
+			members)
 		);
 	}: _(RawOrigin::Signed(supersig_id.clone()), supersig_id.clone(), bob)
 	verify {
@@ -205,7 +205,7 @@ benchmarks! {
 
 		assert_ok!(
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
-			members.clone())
+			members)
 		);
 	}: _(RawOrigin::Signed(alice.clone()), supersig_id)
 	verify {
