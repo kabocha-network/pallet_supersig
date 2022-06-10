@@ -49,24 +49,24 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Supersig Members (r:3 w:3)
 	// Storage: Supersig TotalMembers (r:1 w:1)
 	fn create_supersig(z: u32, ) -> Weight {
-		(92_124_000 as Weight)
+		(92_124_000u64)
 			// Standard Error: 300_000
-			.saturating_add((5_292_000 as Weight).saturating_mul(z as Weight))
-			.saturating_add(T::DbWeight::get().reads(7 as Weight))
-			.saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(z as Weight)))
-			.saturating_add(T::DbWeight::get().writes(7 as Weight))
-			.saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(z as Weight)))
+			.saturating_add((5_292_000u64).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(7u64))
+			.saturating_add(T::DbWeight::get().reads((1u64).saturating_mul(z as Weight)))
+			.saturating_add(T::DbWeight::get().writes(7u64))
+			.saturating_add(T::DbWeight::get().writes((1u64).saturating_mul(z as Weight)))
     }
 	// Storage: Supersig TotalMembers (r:1 w:0)
 	// Storage: System Account (r:1 w:1)
 	// Storage: Supersig NonceCall (r:1 w:1)
 	// Storage: Supersig Calls (r:0 w:1)
 	fn submit_call(z: u32, ) -> Weight {
-		(142_154_000 as Weight)
+		(142_154_000u64)
 			// Standard Error: 0
-			.saturating_add((3_000 as Weight).saturating_mul(z as Weight))
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+			.saturating_add((3_000u64).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(3u64))
+			.saturating_add(T::DbWeight::get().writes(3u64))
 	}
 	// Storage: Supersig TotalMembers (r:1 w:0)
 	// Storage: Supersig Members (r:1 w:0)
@@ -75,9 +75,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Supersig Votes (r:1 w:1)
 	// Storage: System Account (r:1 w:1)
 	fn approve_call() -> Weight {
-		(100_966_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(6 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+		(100_966_000u64)
+			.saturating_add(T::DbWeight::get().reads(6u64))
+			.saturating_add(T::DbWeight::get().writes(5u64))
 	}
 	// Storage: Supersig TotalMembers (r:1 w:0)
 	// Storage: Supersig Calls (r:1 w:1)
@@ -85,33 +85,33 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Supersig UsersVotes (r:0 w:1)
 	// Storage: Supersig Votes (r:0 w:1)
 	fn remove_call() -> Weight {
-		(169_955_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		(169_955_000u64)
+			.saturating_add(T::DbWeight::get().reads(3u64))
+			.saturating_add(T::DbWeight::get().writes(4u64))
 	}
 	// Storage: Supersig TotalMembers (r:1 w:1)
 	// Storage: Supersig Members (r:3 w:3)
 	// Storage: System Account (r:1 w:1)
 	fn add_members(z: u32, ) -> Weight {
-		(41_231_000 as Weight)
+		(41_231_000u64)
 			// Standard Error: 126_000
-			.saturating_add((6_345_000 as Weight).saturating_mul(z as Weight))
-			.saturating_add(T::DbWeight::get().reads(5 as Weight))
-			.saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(z as Weight)))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
-			.saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(z as Weight)))
+			.saturating_add((6_345_000u64).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(5u64))
+			.saturating_add(T::DbWeight::get().reads((1u64).saturating_mul(z as Weight)))
+			.saturating_add(T::DbWeight::get().writes(5u64))
+			.saturating_add(T::DbWeight::get().writes((1u64).saturating_mul(z as Weight)))
 	}
 	// Storage: Supersig TotalMembers (r:1 w:1)
 	// Storage: Supersig Members (r:1 w:1)
 	// Storage: System Account (r:1 w:1)
 	fn remove_members(z: u32, ) -> Weight {
-		(34_818_000 as Weight)
+		(34_818_000u64)
 			// Standard Error: 192_000
-			.saturating_add((7_716_000 as Weight).saturating_mul(z as Weight))
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(z as Weight)))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(z as Weight)))
+			.saturating_add((7_716_000u64).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(2u64))
+			.saturating_add(T::DbWeight::get().reads((1u64).saturating_mul(z as Weight)))
+			.saturating_add(T::DbWeight::get().writes(2u64))
+			.saturating_add(T::DbWeight::get().writes((1u64).saturating_mul(z as Weight)))
 	}
 	// Storage: Supersig NonceSupersig (r:1 w:0)
 	// Storage: System Account (r:2 w:2)
@@ -125,9 +125,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Supersig TotalMembers (r:1 w:1)
 	// Storage: Supersig Members (r:1 w:1)
 	fn leave_supersig() -> Weight {
-		(110_037_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+		(110_037_000u64)
+			.saturating_add(T::DbWeight::get().reads(2u64))
+			.saturating_add(T::DbWeight::get().writes(2u64))
 	}
 }
 
