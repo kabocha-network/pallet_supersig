@@ -106,6 +106,11 @@ pub mod pallet {
 		/// The amount of balance that must be deposited per bytes stored.
 		#[pallet::constant]
 		type PricePerBytes: Get<BalanceOf<Self>>;
+
+		///the maximum users allowed per transaction (adding, removing...)
+		#[pallet::constant]
+		type MaxUsersPerTransaction: Get<u32>;
+
 		/// Weigths module
 		type WeightInfo: WeightInfo;
 	}
@@ -200,6 +205,8 @@ pub mod pallet {
 		CannotDeleteSupersig,
 		/// an user cannot be removed if it leave 0 users in the supersig.
 		CannotRemoveUsers,
+		/// too much users are passed in the extrinsic. The maximum is defined by the config.
+		TooManyUsers,
 	}
 
 	#[pallet::call]
@@ -228,7 +235,10 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let member_length = members.len();
-			if member_length < 2 {
+			if member_length > T::MaxUsersPerTransaction::get() as usize {
+				return Err(Error::<T>::TooManyUsers.into())
+			}
+			if member_length < 1 {
 				return Err(Error::<T>::InvalidSupersig.into())
 			}
 			let index = Self::nonce_supersig();
@@ -250,7 +260,7 @@ pub mod pallet {
 
 			T::Currency::reserve(&supersig_id, price)?;
 
-			Self::add_to_supersig(index, members);
+			Self::internal_add_members(index, members);
 			NonceSupersig::<T>::put(index + 1);
 
 			Self::deposit_event(Event::<T>::SupersigCreated(supersig_id));
@@ -327,8 +337,8 @@ pub mod pallet {
 
 			let member_number = Self::total_members(supersig_index);
 			let vote_weight = match role {
-				Role::Member => 1,
-				Role::Master => member_number / 2,
+				Role::Standard => 1,
+				Role::Master => max(member_number / 2, 1),
 				_ => return Err(Error::<T>::NotMember.into()),
 			};
 
@@ -416,10 +426,13 @@ pub mod pallet {
 			if who != supersig_id {
 				return Err(Error::<T>::NotAllowed.into())
 			}
+			if new_members.len() > T::MaxUsersPerTransaction::get() as usize {
+				return Err(Error::<T>::TooManyUsers.into())
+			}
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 			let new_members = new_members;
 
-			let added = Self::add_to_supersig(supersig_index, new_members);
+			let added = Self::internal_add_members(supersig_index, new_members);
 
 			let deposit = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
 				.saturating_mul((added.len() as u32).into())
@@ -449,15 +462,18 @@ pub mod pallet {
 			if who != supersig_id {
 				return Err(Error::<T>::NotAllowed.into())
 			}
+			if members_to_remove.len() > T::MaxUsersPerTransaction::get() as usize {
+				return Err(Error::<T>::TooManyUsers.into())
+			}
 			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 
-			let nb_removed = Self::remove_users(supersig_index, members_to_remove.clone())?;
+			let removed = Self::internal_remove_members(supersig_index, members_to_remove)?;
 			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
-				.saturating_mul((nb_removed as u32).into())
+				.saturating_mul((removed.len() as u32).into())
 				.saturating_mul(T::PricePerBytes::get());
 			T::Currency::unreserve(&who, reserve);
 
-			Self::deposit_event(Event::<T>::UsersRemoved(supersig_id, members_to_remove));
+			Self::deposit_event(Event::<T>::UsersRemoved(supersig_id, removed));
 
 			Ok(())
 		}
@@ -565,7 +581,7 @@ pub mod pallet {
 			UsersVotes::<T>::remove_prefix((supersig_index, call_index), None);
 		}
 
-		pub fn add_to_supersig(
+		pub fn internal_add_members(
 			supersig_idx: u128,
 			members: Vec<(T::AccountId, Role)>,
 		) -> Vec<(T::AccountId, Role)> {
@@ -581,27 +597,26 @@ pub mod pallet {
 			added
 		}
 
-		pub fn remove_users(
+		#[transactional]
+		pub fn internal_remove_members(
 			supersig_idx: u128,
 			members: Vec<T::AccountId>,
-		) -> Result<u32, pallet::Error<T>> {
-			let mut nb_removed = 0;
+		) -> Result<Vec<T::AccountId>, pallet::Error<T>> {
+			let mut removed = Vec::new();
 
-			let mut members = members;
-			members.retain(|member| Self::members(supersig_idx, member) != Role::NotMember);
-
-			if members.len() + 1 >= Self::total_members(supersig_idx) as usize {
-				return Err(Error::<T>::CannotRemoveUsers)
-			}
 			for member in members {
 				if Self::members(supersig_idx, &member) != Role::NotMember {
-					Members::<T>::remove(supersig_idx, member);
-					nb_removed += 1;
+					Members::<T>::remove(supersig_idx, member.clone());
+					removed.push(member);
 				}
 			}
-			TotalMembers::<T>::mutate(supersig_idx, |n| *n -= nb_removed);
+			let new_total_members = Self::total_members(supersig_idx) - (removed.len() as u32);
+			if new_total_members < 1 {
+				return Err(Error::<T>::CannotRemoveUsers)
+			}
+			TotalMembers::<T>::insert(supersig_idx, new_total_members);
 
-			Ok(nb_removed)
+			Ok(removed)
 		}
 	}
 }

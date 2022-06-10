@@ -1,32 +1,35 @@
 //! Benchmarking setup for pallet-supersig
 #![cfg(feature = "runtime-benchmarks")]
 
-// use super::*;
+use super::*;
 
-// use crate::Pallet;
-// use frame_benchmarking::{account as benchmark_account, benchmarks};
-// use frame_support::{assert_ok, traits::Get};
-// use frame_system::RawOrigin;
-// use sp_std::vec;
-//
-// pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
-// 	let account: T::AccountId = benchmark_account(name, 0, 0);
-// 	account
-// }
-//
-// benchmarks! {
-// 	create_supersig {
-// 		let alice: T::AccountId = get_account::<T>("ALICE");
-// 		let bob: T::AccountId = get_account::<T>("BOB");
-// 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
-// 		let val: BalanceOf<T> = 1_000_000_000u32.into();
-// 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(10000u32.into()));
-//
-//
-// 	}: _(RawOrigin::Signed(alice.clone()), vec!(alice.clone(), bob, charlie), Some(alice.clone()))
-// 	verify {
-// 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
-// 	}
+use crate::Pallet;
+use frame_benchmarking::{account as benchmark_account, benchmarks};
+use frame_support::{assert_ok, traits::Get};
+use frame_system::RawOrigin;
+use sp_std::vec;
+
+pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
+	let account: T::AccountId = benchmark_account(name, 0, 0);
+	account
+}
+
+benchmarks! {
+	create_supersig {
+		let z in 0 .. 100;
+		let alice: T::AccountId = get_account::<T>("ALICE");
+		let bob: T::AccountId = get_account::<T>("BOB");
+		let charlie: T::AccountId = get_account::<T>("CHARLIE");
+		let val: BalanceOf<T> = 1_000_000_000u32.into();
+		T::Currency::make_free_balance_be(&alice, val.saturating_mul(10000u32.into()));
+		// get_account_id_from_seed::<sr25519::Public>("Alice")
+
+
+	}: _(RawOrigin::Signed(alice.clone()), vec!((alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)))
+	verify {
+		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
+	}
+}
 // 	submit_call {
 // 		let z in 0 .. 10_000;
 // 		let call: <T as Config>::Call = frame_system::Call::<T>::remark {

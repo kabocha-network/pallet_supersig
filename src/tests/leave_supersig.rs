@@ -9,9 +9,9 @@ fn leave_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -36,8 +36,8 @@ fn leave_supersig_not_a_member() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -55,9 +55,9 @@ fn leave_unknown_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
 			},
 		));
 		let bad_supersig_id = get_account_id(1);
@@ -75,8 +75,8 @@ fn leave_supersig_last_user() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);

@@ -9,22 +9,22 @@ fn remove_members() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
-				(PAUL(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
+				(PAUL(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
 		assert_ok!(Supersig::remove_members(
 			Origin::signed(supersig_id.clone()),
 			supersig_id.clone(),
-			vec!(BOB(), CHARLIE())
+			vec!(BOB(), CHARLIE(), CHARLIE())
 		));
-		assert_eq!(Supersig::members(0, ALICE()), Role::Member);
+		assert_eq!(Supersig::members(0, ALICE()), Role::Standard);
 		assert_eq!(Supersig::members(0, BOB()), Role::NotMember);
 		assert_eq!(Supersig::members(0, CHARLIE()), Role::NotMember);
-		assert_eq!(Supersig::members(0, PAUL()), Role::Member);
+		assert_eq!(Supersig::members(0, PAUL()), Role::Standard);
 		assert_eq!(Supersig::total_members(0), 2);
 
 		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
@@ -47,10 +47,10 @@ fn remove_users_not_allowed() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
-				(PAUL(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
+				(PAUL(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -67,10 +67,10 @@ fn remove_users_unknown_supersig() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
-				(PAUL(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
+				(PAUL(), Role::Standard),
 			},
 		));
 		let bad_supersig_id = get_account_id(1);
@@ -86,14 +86,13 @@ fn remove_users_unknown_supersig() {
 }
 
 #[test]
-fn remove_users_leaving_1_users() {
+fn remove_users_leaving_0_users() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -104,6 +103,29 @@ fn remove_users_leaving_1_users() {
 				vec!(ALICE(), BOB())
 			),
 			Error::<Test>::CannotRemoveUsers
+		);
+	})
+}
+
+#[test]
+fn remove_too_many_users() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			Origin::signed(ALICE()),
+			vec![
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
+			]
+		));
+		let supersig_id = get_account_id(0);
+		assert_noop!(
+			Supersig::remove_members(
+				Origin::signed(supersig_id.clone()),
+				supersig_id,
+				vec! {ALICE(), BOB(), CHARLIE(), PAUL(), DONALD()}
+			),
+			Error::<Test>::TooManyUsers
 		);
 	})
 }

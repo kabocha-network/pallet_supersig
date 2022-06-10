@@ -2,7 +2,7 @@
 name = "pallet-supersig"
 authors = ["Nathan GD <https://github.com/gdnathan>"]
 description = "pallet supersig is an improved version of palelt multisig"
-version = "0.1.0"
+version = "1.1.0"
 license = "Unlicense"
 homepage = "https://substrate.io"
 repository = "https://github.com/paritytech/substrate/"

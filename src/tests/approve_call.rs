@@ -15,9 +15,9 @@ fn approve_call() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -52,9 +52,9 @@ fn approve_call_until_threshold() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -114,9 +114,9 @@ fn approve_call_as_master() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -176,9 +176,9 @@ fn approve_supersig_doesnt_exist() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -204,9 +204,9 @@ fn user_already_voted() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -237,8 +237,8 @@ fn approve_not_a_member() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);

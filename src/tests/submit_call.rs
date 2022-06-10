@@ -9,9 +9,9 @@ fn submit_calls() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
 			},
 		));
 		let supersig_id = get_account_id(0);
@@ -64,9 +64,9 @@ fn submit_supersig_doesnt_exist() {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			vec! {
-				(ALICE(), Role::Member),
-				(BOB(), Role::Member),
-				(CHARLIE(), Role::Member),
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
 			},
 		));
 		let bad_supersig_id = get_account_id(1);

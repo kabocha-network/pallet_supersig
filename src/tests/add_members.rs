@@ -6,7 +6,7 @@ pub use sp_std::{boxed::Box, mem::size_of};
 #[test]
 fn add_members() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		let members = vec![(ALICE(), Role::Member), (BOB(), Role::Member)];
+		let members = vec![(ALICE(), Role::Standard), (BOB(), Role::Standard)];
 		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), members,));
 
 		let supersig_id = get_account_id(0);
@@ -18,12 +18,12 @@ fn add_members() {
 		assert_ok!(Supersig::add_members(
 			Origin::signed(supersig_id.clone()),
 			supersig_id.clone(),
-			vec!((BOB(), Role::Master), (CHARLIE(), Role::Member))
+			vec!((BOB(), Role::Master), (CHARLIE(), Role::Standard))
 		));
 
-		assert_eq!(Supersig::members(0, ALICE()), Role::Member);
+		assert_eq!(Supersig::members(0, ALICE()), Role::Standard);
 		assert_eq!(Supersig::members(0, BOB()), Role::Master);
-		assert_eq!(Supersig::members(0, CHARLIE()), Role::Member);
+		assert_eq!(Supersig::members(0, CHARLIE()), Role::Standard);
 		assert_eq!(Supersig::total_members(0), 3);
 
 		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
@@ -34,7 +34,7 @@ fn add_members() {
 			last_event(),
 			Event::Supersig(crate::Event::UsersAdded(
 				supersig_id,
-				vec!((CHARLIE(), Role::Member))
+				vec!((CHARLIE(), Role::Standard))
 			))
 		);
 	})
@@ -43,7 +43,7 @@ fn add_members() {
 #[test]
 fn add_users_not_allowed() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		let members = vec![(ALICE(), Role::Member), (BOB(), Role::Member)];
+		let members = vec![(ALICE(), Role::Standard), (BOB(), Role::Standard)];
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			members.clone(),
@@ -59,7 +59,7 @@ fn add_users_not_allowed() {
 #[test]
 fn add_users_unknown_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		let members = vec![(ALICE(), Role::Member), (BOB(), Role::Member)];
+		let members = vec![(ALICE(), Role::Standard), (BOB(), Role::Standard)];
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
 			members.clone(),
@@ -72,6 +72,31 @@ fn add_users_unknown_supersig() {
 				members
 			),
 			Error::<Test>::SupersigNotFound
+		);
+	})
+}
+
+#[test]
+fn add_too_many_users() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			Origin::signed(ALICE()),
+			vec![(ALICE(), Role::Standard), (BOB(), Role::Standard),]
+		));
+		let supersig_id = get_account_id(1);
+		assert_noop!(
+			Supersig::add_members(
+				Origin::signed(supersig_id.clone()),
+				supersig_id,
+				vec![
+					(ALICE(), Role::Standard),
+					(BOB(), Role::Standard),
+					(CHARLIE(), Role::Standard),
+					(PAUL(), Role::Standard),
+					(DONALD(), Role::Standard),
+				]
+			),
+			Error::<Test>::TooManyUsers
 		);
 	})
 }
