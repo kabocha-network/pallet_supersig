@@ -78,7 +78,7 @@ benchmarks! {
 			vec!((alice.clone(), Role::Standard), (bob.clone(), Role::Standard), (charlie, Role::Standard)))
 		);
 		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
-		assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), 0));
+		assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice).into(), supersig_id.clone(), 0));
 	}: _(RawOrigin::Signed(bob.clone()), supersig_id, 0)
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
