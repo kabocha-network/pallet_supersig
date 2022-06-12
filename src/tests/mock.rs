@@ -115,14 +115,14 @@ impl pallet_balances::Config for Test {
 parameter_types! {
 	pub const SupersigPalletId: PalletId = PalletId(*b"id/susig");
 	pub const SupersigPreimageByteDeposit: Balance = 1000;
-	pub const MaxUsersPerTransaction: u32 = 4;
+	pub const MaxMembersPerTransaction: u32 = 4;
 }
 
 impl pallet_supersig::Config for Test {
 	type Call = Call;
 	type Currency = Balances;
 	type Event = Event;
-	type MaxUsersPerTransaction = MaxUsersPerTransaction;
+	type MaxMembersPerTransaction = MaxMembersPerTransaction;
 	type PalletId = SupersigPalletId;
 	type DepositPerByte = SupersigPreimageByteDeposit;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;

@@ -13,13 +13,14 @@ fn remove_members() {
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
 				(PAUL(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap(),
 		));
 		let supersig_id = get_account_id(0);
 		assert_ok!(Supersig::remove_members(
 			Origin::signed(supersig_id.clone()),
-			supersig_id.clone(),
-			vec!(BOB(), CHARLIE(), CHARLIE())
+			vec!(BOB(), CHARLIE(), CHARLIE()).try_into().unwrap()
 		));
 		assert_eq!(Supersig::members(0, ALICE()), Role::Standard);
 		assert_eq!(Supersig::members(0, BOB()), Role::NotMember);
@@ -33,7 +34,7 @@ fn remove_members() {
 		assert_eq!(Balances::reserved_balance(get_account_id(0)), reserve);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::UsersRemoved(
+			Event::Supersig(crate::Event::MembersRemoved(
 				supersig_id,
 				vec!(BOB(), CHARLIE())
 			))
@@ -51,12 +52,16 @@ fn remove_users_not_allowed() {
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
 				(PAUL(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
 		assert_noop!(
-			Supersig::remove_members(Origin::signed(ALICE()), supersig_id, vec!(BOB(), CHARLIE())),
-			Error::<Test>::NotAllowed
+			Supersig::remove_members(
+				Origin::signed(ALICE()),
+				vec!(BOB(), CHARLIE()).try_into().unwrap()
+			),
+			Error::<Test>::NotSupersig
 		);
 	})
 }
@@ -71,14 +76,15 @@ fn remove_users_unknown_supersig() {
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
 				(PAUL(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap(),
 		));
 		let bad_supersig_id = get_account_id(1);
 		assert_noop!(
 			Supersig::remove_members(
 				Origin::signed(bad_supersig_id.clone()),
-				bad_supersig_id,
-				vec!(BOB(), CHARLIE())
+				vec!(BOB(), CHARLIE()).try_into().unwrap()
 			),
 			Error::<Test>::NotSupersig
 		);
@@ -93,39 +99,17 @@ fn remove_users_leaving_0_users() {
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap(),
 		));
 		let supersig_id = get_account_id(0);
 		assert_noop!(
 			Supersig::remove_members(
 				Origin::signed(supersig_id.clone()),
-				supersig_id,
-				vec!(ALICE(), BOB())
+				vec!(ALICE(), BOB()).try_into().unwrap()
 			),
 			Error::<Test>::InvalidNumberOfMembers
-		);
-	})
-}
-
-#[test]
-fn remove_too_many_users() {
-	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
-			vec![
-				(ALICE(), Role::Standard),
-				(BOB(), Role::Standard),
-				(CHARLIE(), Role::Standard),
-			]
-		));
-		let supersig_id = get_account_id(0);
-		assert_noop!(
-			Supersig::remove_members(
-				Origin::signed(supersig_id.clone()),
-				supersig_id,
-				vec! {ALICE(), BOB(), CHARLIE(), PAUL(), DONALD()}
-			),
-			Error::<Test>::TooManyUsers
 		);
 	})
 }
