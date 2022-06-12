@@ -87,10 +87,6 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
-	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	pub struct Pallet<T>(_);
-
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// the obiquitous event type
@@ -117,6 +113,10 @@ pub mod pallet {
 		/// Weigths module
 		type WeightInfo: WeightInfo;
 	}
+
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
 	#[pallet::getter(fn nonce_supersig)]
@@ -183,7 +183,7 @@ pub mod pallet {
 		/// a Call has been voted [supersig, call_nonce, voter]
 		CallVoted(T::AccountId, CallId, T::AccountId),
 		/// a Call has been executed [supersig, call_nonce, result]
-		CallExecuted(T::AccountId, CallId, DispatchResult),
+		CallExecutionAttempted(T::AccountId, CallId, Result<DispatchResult, DispatchError>),
 		/// a Call has been removed [supersig, call_nonce]
 		CallRemoved(T::AccountId, CallId),
 		/// the list of users added to the supersig [supersig, [(user, role)]]
@@ -215,6 +215,8 @@ pub mod pallet {
 		Conversion,
 		/// overflow
 		Overflow,
+		/// could not execute the call because it was incorrectly encoded
+		BadEncodedCall,
 	}
 
 	#[pallet::call]
@@ -353,11 +355,7 @@ pub mod pallet {
 			}
 
 			// Different roles have different voting weight
-			let vote_weight = match Self::members(supersig_id, &who) {
-				Role::Standard => 1,
-				Role::Master => max(Self::total_members(supersig_id) / 2, 1),
-				Role::NotMember => return Err(Error::<T>::NotMember.into()),
-			};
+			let vote_weight = Self::calc_vote_weight(supersig_id, &who)?;
 
 			// Update storages with the user vote
 			MembersVotes::<T>::insert((supersig_id, call_id, who.clone()), true);
@@ -374,22 +372,28 @@ pub mod pallet {
 			let total_votes = Self::votes(supersig_id, call_id);
 			if total_votes >= (Self::total_members(supersig_id) / 2 + 1) {
 				if let Some(preimage) = Self::calls(supersig_id, call_id) {
-					if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..]) {
-						T::Currency::unreserve(&preimage.provider, preimage.deposit);
+					// free storage and unreserve deposit
+					Self::unchecked_remove_call_from_storages(supersig_id, call_id);
+					T::Currency::unreserve(&preimage.provider, preimage.deposit);
 
-						let res = call
+					// Try to decode and execute the call
+					let res = if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..])
+					{
+						Ok(call
 							.dispatch(
 								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
 							)
 							.map(|_| ())
-							.map_err(|e| e.error);
-						Self::unchecked_remove_call_from_storages(supersig_id, call_id);
-						Self::deposit_event(Event::<T>::CallExecuted(
-							supersig_account,
-							call_id,
-							res,
-						));
-					}
+							.map_err(|e| e.error))
+					} else {
+						Err(Error::<T>::BadEncodedCall.into())
+					};
+
+					Self::deposit_event(Event::<T>::CallExecutionAttempted(
+						supersig_account,
+						call_id,
+						res,
+					));
 				}
 			}
 
@@ -588,7 +592,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub fn get_supersig_id_from_account(
+		fn get_supersig_id_from_account(
 			supersig_account: &T::AccountId,
 		) -> Result<SupersigId, pallet::Error<T>> {
 			if let Some((account, supersig_id)) = PalletId::try_from_sub_account(supersig_account) {
@@ -621,7 +625,7 @@ pub mod pallet {
 			frame_system::Pallet::<T>::dec_consumers(supersig_account);
 		}
 
-		pub fn internal_add_members(
+		fn internal_add_members(
 			supersig_id: SupersigId,
 			members: BoundedVec<(T::AccountId, Role), T::MaxMembersPerTransaction>,
 		) -> Result<Vec<(T::AccountId, Role)>, Error<T>> {
@@ -646,7 +650,7 @@ pub mod pallet {
 		}
 
 		#[transactional]
-		pub fn internal_remove_members(
+		fn internal_remove_members(
 			supersig_id: SupersigId,
 			members: BoundedVec<T::AccountId, T::MaxMembersPerTransaction>,
 		) -> Result<Vec<T::AccountId>, pallet::Error<T>> {
@@ -699,6 +703,14 @@ pub mod pallet {
 		) {
 			T::Currency::unreserve(supersig_account, amount);
 			TotalDeposit::<T>::mutate(supersig_id, |val| *val = val.saturating_sub(amount));
+		}
+
+		fn calc_vote_weight(supersig_id: SupersigId, who: &T::AccountId) -> Result<u32, Error<T>> {
+			match Self::members(supersig_id, &who) {
+				Role::Standard => Ok(1),
+				Role::Master => Ok(max(Self::total_members(supersig_id) / 2, 1)),
+				Role::NotMember => Err(Error::<T>::NotMember),
+			}
 		}
 	}
 }
