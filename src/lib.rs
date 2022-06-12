@@ -64,7 +64,7 @@ pub use frame_support::{
 	dispatch::DispatchResult,
 	traits::{tokens::ExistenceRequirement, Currency, ReservableCurrency},
 	transactional,
-	weights::{GetDispatchInfo, PostDispatchInfo},
+	weights::{extract_actual_weight, GetDispatchInfo, PostDispatchInfo},
 	PalletId,
 };
 pub use sp_core::Hasher;
@@ -117,6 +117,75 @@ pub mod pallet {
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		/// Pop validated calls from the storage and execute them.
+		/// It will execute as many as possible within the [BlockWeights](frame_system::limits::BlockWeights) limits
+		fn on_initialize(_: T::BlockNumber) -> Weight {
+			let mut cumulated_weight = 0;
+			let max_block = T::BlockWeights::get().max_block;
+
+			let voted_calls = VotedCalls::<T>::get();
+			// account for the reading and updating of the voted_calls
+			cumulated_weight =
+				cumulated_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+			let mut remaining_calls = vec![];
+
+			for (supersig_id, call_id, preimage) in voted_calls {
+				let supersig_account: T::AccountId =
+					T::PalletId::get().into_sub_account(supersig_id);
+
+				// the call cannot be decoded, this should not happen
+				// But if it does we clean storage, unreserve funds and continue graciously
+				let call = match <T as Config>::Call::decode(&mut &preimage.data[..]) {
+					Ok(c) => c,
+					Err(_) => {
+						T::Currency::unreserve(&preimage.provider, preimage.deposit);
+						Self::unchecked_remove_call_from_storages(supersig_id, call_id);
+						// take into account the unreserve call
+						cumulated_weight =
+							cumulated_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+						Self::deposit_event(Event::<T>::CallExecuted(
+							supersig_account,
+							call_id,
+							None,
+						));
+						continue;
+					},
+				};
+
+				// this call worst scenario weight is too heavy to be included in this block.
+				// keep it in storage for a future block inclusion.
+				if cumulated_weight + call.get_dispatch_info().weight > max_block {
+					remaining_calls.push((supersig_id, call_id, preimage));
+					continue;
+				}
+
+				// execute the call and account for the actual weight used by this call
+				let dispatch_info = call.get_dispatch_info();
+				let result =
+					call.dispatch(frame_system::RawOrigin::Signed(supersig_account.clone()).into());
+				let actual_weight = extract_actual_weight(&result, &dispatch_info);
+
+				T::Currency::unreserve(&preimage.provider, preimage.deposit);
+				Self::unchecked_remove_call_from_storages(supersig_id, call_id);
+				cumulated_weight = cumulated_weight.saturating_add(
+					// take into account the unreserve call
+					actual_weight.saturating_add(T::DbWeight::get().reads_writes(1, 1)),
+				);
+
+				Self::deposit_event(Event::<T>::CallExecuted(
+					supersig_account,
+					call_id,
+					Some(result.map(|_| ()).map_err(|e| e.error)),
+				));
+			}
+
+			VotedCalls::<T>::set(remaining_calls);
+			cumulated_weight
+		}
+	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn nonce_supersig)]
@@ -171,27 +240,36 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::unbounded]
+	#[pallet::getter(fn voted_calls)]
+	pub type VotedCalls<T: Config> = StorageValue<
+		_,
+		Vec<(SupersigId, CallId, PreimageCall<T::AccountId, BalanceOf<T>>)>,
+		ValueQuery,
+	>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Supersig has been created [supersig]
+		/// Supersig has been created (supersig)
 		SupersigCreated(T::AccountId),
-		/// a supersig have been removed [supersig]
+		/// a supersig have been removed (supersig)
 		SupersigRemoved(T::AccountId),
-		/// a Call has been submited [supersig, call_nonce, submiter]
+		/// a Call has been submited (supersig, call_nonce, submiter)
 		CallSubmitted(T::AccountId, CallId, T::AccountId),
-		/// a Call has been voted [supersig, call_nonce, voter]
+		/// a Call has been voted (supersig, call_nonce, voter)
 		CallVoted(T::AccountId, CallId, T::AccountId),
-		/// a Call has been executed [supersig, call_nonce, result]
-		CallExecutionAttempted(T::AccountId, CallId, Result<DispatchResult, DispatchError>),
-		/// a Call has been removed [supersig, call_nonce]
+		/// a Call has been executed (supersig, call_nonce, result)
+		CallExecuted(T::AccountId, CallId, Option<DispatchResult>),
+		/// a Call has been removed (supersig, call_nonce)
 		CallRemoved(T::AccountId, CallId),
-		/// the list of users added to the supersig [supersig, [(user, role)]]
+		/// the list of users added to the supersig (supersig, [(user, role)])
 		/// Users that were already in the supersig wont appear
 		MembersAdded(T::AccountId, Vec<(T::AccountId, Role)>),
-		/// the list of users removed from the supersig [supersig, removed_users]
+		/// the list of users removed from the supersig (supersig, removed_users)
 		MembersRemoved(T::AccountId, Vec<T::AccountId>),
-		/// a member leaved the supersig [supersig, member]
+		/// a member leaved the supersig (supersig, member)
 		SupersigLeaved(T::AccountId, T::AccountId),
 	}
 
@@ -372,28 +450,7 @@ pub mod pallet {
 			let total_votes = Self::votes(supersig_id, call_id);
 			if total_votes >= (Self::total_members(supersig_id) / 2 + 1) {
 				if let Some(preimage) = Self::calls(supersig_id, call_id) {
-					// free storage and unreserve deposit
-					Self::unchecked_remove_call_from_storages(supersig_id, call_id);
-					T::Currency::unreserve(&preimage.provider, preimage.deposit);
-
-					// Try to decode and execute the call
-					let res = if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..])
-					{
-						Ok(call
-							.dispatch(
-								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
-							)
-							.map(|_| ())
-							.map_err(|e| e.error))
-					} else {
-						Err(Error::<T>::BadEncodedCall.into())
-					};
-
-					Self::deposit_event(Event::<T>::CallExecutionAttempted(
-						supersig_account,
-						call_id,
-						res,
-					));
+					VotedCalls::<T>::mutate(|calls| calls.push((supersig_id, call_id, preimage)));
 				}
 			}
 
