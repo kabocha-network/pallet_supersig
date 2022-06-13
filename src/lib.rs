@@ -108,7 +108,7 @@ pub mod pallet {
 
 		/// The maximum number of account that can added or removed in a single call
 		#[pallet::constant]
-		type MaxMembersPerTransaction: Get<u32>;
+		type MaxAccountsPerTransaction: Get<u32>;
 
 		/// Weigths module
 		type WeightInfo: WeightInfo;
@@ -241,7 +241,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::create_supersig(members.len() as u32))]
 		pub fn create_supersig(
 			origin: OriginFor<T>,
-			members: BoundedVec<(T::AccountId, Role), T::MaxMembersPerTransaction>,
+			members: BoundedVec<(T::AccountId, Role), T::MaxAccountsPerTransaction>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -447,7 +447,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::add_members(new_members.len() as u32))]
 		pub fn add_members(
 			origin: OriginFor<T>,
-			new_members: BoundedVec<(T::AccountId, Role), T::MaxMembersPerTransaction>,
+			new_members: BoundedVec<(T::AccountId, Role), T::MaxAccountsPerTransaction>,
 		) -> DispatchResult {
 			let supersig_account = ensure_signed(origin)?;
 			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
@@ -475,7 +475,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::remove_members(members_to_remove.len() as u32))]
 		pub fn remove_members(
 			origin: OriginFor<T>,
-			members_to_remove: BoundedVec<T::AccountId, T::MaxMembersPerTransaction>,
+			members_to_remove: BoundedVec<T::AccountId, T::MaxAccountsPerTransaction>,
 		) -> DispatchResult {
 			let supersig_account = ensure_signed(origin)?;
 			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
@@ -635,7 +635,7 @@ pub mod pallet {
 
 		fn internal_add_members(
 			supersig_id: SupersigId,
-			members: BoundedVec<(T::AccountId, Role), T::MaxMembersPerTransaction>,
+			members: BoundedVec<(T::AccountId, Role), T::MaxAccountsPerTransaction>,
 		) -> Result<Vec<(T::AccountId, Role)>, Error<T>> {
 			let mut added = Vec::new();
 
@@ -660,7 +660,7 @@ pub mod pallet {
 		#[transactional]
 		fn internal_remove_members(
 			supersig_id: SupersigId,
-			members: BoundedVec<T::AccountId, T::MaxMembersPerTransaction>,
+			members: BoundedVec<T::AccountId, T::MaxAccountsPerTransaction>,
 		) -> Result<Vec<T::AccountId>, pallet::Error<T>> {
 			let mut removed = Vec::new();
 
