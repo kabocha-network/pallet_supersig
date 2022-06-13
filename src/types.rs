@@ -1,25 +1,22 @@
 use crate::*;
 use codec::{Decode, Encode};
+use frame_support::pallet_prelude::MaxEncodedLen;
 use scale_info::TypeInfo;
 
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-#[derive(Clone, Encode, Decode, TypeInfo, Debug, PartialEq, Eq)]
-pub struct Supersig<AccountId> {
-	pub members: Vec<AccountId>,
+#[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen, Debug)]
+#[codec(mel_bound())]
+pub enum Role {
+	Standard,
+	Master,
+	NotMember,
 }
 
-impl<AccountId: sp_std::cmp::PartialEq> Supersig<AccountId> {
-	pub fn new(members: Vec<AccountId>) -> Option<Self> {
-		if members.is_empty() {
-			return None
-		}
-		Some(Self { members })
-	}
-
-	pub fn is_user_in_supersig(&self, user: &AccountId) -> bool {
-		self.members.contains(user)
+impl Default for Role {
+	fn default() -> Self {
+		Role::NotMember
 	}
 }
 
@@ -30,5 +27,5 @@ pub struct PreimageCall<AccountId, Balance> {
 	pub deposit: Balance,
 }
 
-pub type SigIndex = u128;
-pub type CallIndex = u128;
+pub type SupersigId = u128;
+pub type CallId = u128;

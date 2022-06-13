@@ -45,7 +45,7 @@
 //! - `remove_members` - remove members from the supersig. In case some user are not in the
 //!   supersig, they will be ignored.
 //!
-//! - `remove_supersig` - remove the supersig and all the associated data. Funds will be unreserved
+//! - `delete_supersig` - remove the supersig and all the associated data. Funds will be unreserved
 //!   and transfered to specified beneficiary.
 //!
 //! - `leave_supersig` - remove the caller from the supersig.
@@ -69,7 +69,10 @@ pub use frame_support::{
 };
 pub use sp_core::Hasher;
 
-pub use sp_runtime::traits::{AccountIdConversion, Dispatchable, Hash, Saturating};
+pub use sp_runtime::traits::{
+	AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Dispatchable, Hash,
+	Saturating,
+};
 pub use sp_std::{boxed::Box, cmp::max, mem::size_of, prelude::Vec};
 
 pub mod types;
@@ -83,10 +86,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-
-	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	pub struct Pallet<T>(_);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -103,26 +102,43 @@ pub mod pallet {
 			+ GetDispatchInfo
 			+ From<frame_system::Call<Self>>;
 
-		/// The amount of balance that must be deposited per bytes stored.
+		/// The amount of balance that must be deposited per bytes stored
 		#[pallet::constant]
-		type PricePerBytes: Get<BalanceOf<Self>>;
+		type DepositPerByte: Get<BalanceOf<Self>>;
+
+		/// The maximum number of account that can added or removed in a single call
+		#[pallet::constant]
+		type MaxMembersPerTransaction: Get<u32>;
+
 		/// Weigths module
 		type WeightInfo: WeightInfo;
 	}
 
-	#[pallet::storage]
-	#[pallet::getter(fn nonce_supersig)]
-	pub type NonceSupersig<T: Config> = StorageValue<_, SigIndex, ValueQuery>;
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
 	#[pallet::storage]
-	#[pallet::unbounded]
-	#[pallet::getter(fn supersigs)]
-	pub type Supersigs<T: Config> =
-		StorageMap<_, Blake2_256, SigIndex, Supersig<T::AccountId>, OptionQuery>;
+	#[pallet::getter(fn nonce_supersig)]
+	pub type NonceSupersig<T: Config> = StorageValue<_, SupersigId, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn members)]
+	pub type Members<T: Config> =
+		StorageDoubleMap<_, Blake2_256, SupersigId, Blake2_256, T::AccountId, Role, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn total_members)]
+	pub type TotalMembers<T: Config> = StorageMap<_, Blake2_256, SupersigId, u32, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn total_deposit)]
+	pub type TotalDeposit<T: Config> =
+		StorageMap<_, Blake2_256, SupersigId, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn nonce_call)]
-	pub type NonceCall<T: Config> = StorageMap<_, Blake2_256, SigIndex, CallIndex, ValueQuery>;
+	pub type NonceCall<T: Config> = StorageMap<_, Blake2_256, SupersigId, CallId, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::unbounded]
@@ -130,9 +146,9 @@ pub mod pallet {
 	pub type Calls<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_256,
-		SigIndex,
+		SupersigId,
 		Blake2_256,
-		CallIndex,
+		CallId,
 		PreimageCall<T::AccountId, BalanceOf<T>>,
 		OptionQuery,
 	>;
@@ -140,15 +156,15 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn votes)]
 	pub type Votes<T: Config> =
-		StorageDoubleMap<_, Blake2_256, SigIndex, Blake2_256, CallIndex, u128, ValueQuery>;
+		StorageDoubleMap<_, Blake2_256, SupersigId, Blake2_256, CallId, u32, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn users_votes)]
-	pub type UsersVotes<T: Config> = StorageNMap<
+	#[pallet::getter(fn members_votes)]
+	pub type MembersVotes<T: Config> = StorageNMap<
 		_,
 		(
-			NMapKey<Blake2_256, SigIndex>,
-			NMapKey<Blake2_256, CallIndex>,
+			NMapKey<Blake2_256, SupersigId>,
+			NMapKey<Blake2_256, CallId>,
 			NMapKey<Blake2_256, T::AccountId>,
 		),
 		bool,
@@ -160,43 +176,47 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Supersig has been created [supersig]
 		SupersigCreated(T::AccountId),
-		/// a Call has been submited [supersig, call_nonce, submiter]
-		CallSubmitted(T::AccountId, CallIndex, T::AccountId),
-		/// a Call has been voted [supersig, call_nonce, voter]
-		CallVoted(T::AccountId, CallIndex, T::AccountId),
-		/// a Call has been executed [supersig, call_nonce, result]
-		CallExecuted(T::AccountId, CallIndex, DispatchResult),
-		/// a Call has been removed [supersig, call_nonce]
-		CallRemoved(T::AccountId, CallIndex),
-		/// the list of users added to the supersig. Users that were already
-		/// in the supersig wont appear [supersig, added_users]
-		UsersAdded(T::AccountId, Vec<T::AccountId>),
-		/// the list of users removed from the supersig. [supersig, removed_users]
-		UsersRemoved(T::AccountId, Vec<T::AccountId>),
-		/// a supersig have been removed [supersig_id]
+		/// a supersig have been removed [supersig]
 		SupersigRemoved(T::AccountId),
-		/// a member leaved the supersig [supersig_id, member]
+		/// a Call has been submited [supersig, call_nonce, submiter]
+		CallSubmitted(T::AccountId, CallId, T::AccountId),
+		/// a Call has been voted [supersig, call_nonce, voter]
+		CallVoted(T::AccountId, CallId, T::AccountId),
+		/// a Call has been executed [supersig, call_nonce, result]
+		CallExecutionAttempted(T::AccountId, CallId, Result<DispatchResult, DispatchError>),
+		/// a Call has been removed [supersig, call_nonce]
+		CallRemoved(T::AccountId, CallId),
+		/// the list of users added to the supersig [supersig, [(user, role)]]
+		/// Users that were already in the supersig wont appear
+		MembersAdded(T::AccountId, Vec<(T::AccountId, Role)>),
+		/// the list of users removed from the supersig [supersig, removed_users]
+		MembersRemoved(T::AccountId, Vec<T::AccountId>),
+		/// a member leaved the supersig [supersig, member]
 		SupersigLeaved(T::AccountId, T::AccountId),
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// supersig either have no member or have an invalid treshold (0)
-		InvalidSupersig,
-		/// the supersig doesn't exist
-		SupersigNotFound,
+		/// supersig must have at least one member
+		InvalidNumberOfMembers,
+		/// the call origin is not an existing supersig
+		NotSupersig,
 		/// the call doesn't exist
 		CallNotFound,
 		/// the user is not a member of the supersig
 		NotMember,
-		/// the user already voted for the call
+		/// the member already voted for the call
 		AlreadyVoted,
-		/// the signatory is not the supersig.
+		/// the signatory is not allowed to perform this call
 		NotAllowed,
 		/// the supersig couldn't be deleted. This is due to the supersig having locked tokens
-		CannotDeleteSupersig,
-		/// an user cannot be removed if it leave 0 users in the supersig.
-		CannotRemoveUsers,
+		SupersigHaveLockedFunds,
+		/// conversion
+		Conversion,
+		/// overflow
+		Overflow,
+		/// could not execute the call because it was incorrectly encoded
+		BadEncodedCall,
 	}
 
 	#[pallet::call]
@@ -207,7 +227,7 @@ pub mod pallet {
 		/// currencies from the creator to the generated supersig:
 		///     - the existencial deposit (minimum amount to make an account alive)
 		///     - the price corresponding to the size (in bytes) of the members times the
-		///       PricePerBytes
+		///       DepositPerByte
 		///
 		/// The dispatch origin for this call must be `Signed`.
 		///
@@ -218,33 +238,46 @@ pub mod pallet {
 		/// - `frame_system::inc_consumers` will be called once to protect the supersig from
 		///   deletion
 		#[transactional]
-		#[pallet::weight(T::WeightInfo::create_supersig())]
-		pub fn create_supersig(origin: OriginFor<T>, members: Vec<T::AccountId>) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::create_supersig(members.len() as u32))]
+		pub fn create_supersig(
+			origin: OriginFor<T>,
+			members: BoundedVec<(T::AccountId, Role), T::MaxMembersPerTransaction>,
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let supersig = Supersig::new(members.clone()).ok_or(Error::<T>::InvalidSupersig)?;
-			let index = Self::nonce_supersig();
-			let supersig_id: T::AccountId = T::PalletId::get().into_sub_account(index);
 
-			let price = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
-				.saturating_mul((members.len() as u32).into())
-				.saturating_mul(T::PricePerBytes::get());
-			let deposit = max(T::Currency::minimum_balance(), price);
+			// A supersig should at least have one member
+			let member_length = members.len();
+			if member_length < 1 {
+				return Err(Error::<T>::InvalidNumberOfMembers.into())
+			}
 
+			// Get it id and associated account
+			let supersig_id = Self::nonce_supersig();
+			let supersig_account: T::AccountId = T::PalletId::get().into_sub_account(supersig_id);
+
+			// Update Members and TotalMembers storages
+			let added_members = Self::internal_add_members(supersig_id, members)?;
+
+			// Bring account to existence
+			let deposit = Self::compute_deposit(size_of::<T::AccountId>() * added_members.len())?;
+			let amount_to_transfer = max(T::Currency::minimum_balance(), deposit);
 			T::Currency::transfer(
 				&who,
-				&supersig_id,
-				deposit,
+				&supersig_account,
+				amount_to_transfer,
 				ExistenceRequirement::AllowDeath,
 			)?;
 
-			frame_system::Pallet::<T>::inc_consumers(&supersig_id)?;
+			// Prevent the supersig account to sign transaction that would kill it
+			frame_system::Pallet::<T>::inc_consumers(&supersig_account)?;
 
-			T::Currency::reserve(&supersig_id, price)?;
+			// Incentive to delete supersigs that are no longer used
+			Self::reserve_and_record_deposit(supersig_id, &supersig_account, deposit)?;
 
-			Supersigs::<T>::insert(index, supersig);
-			NonceSupersig::<T>::put(index + 1);
+			NonceSupersig::<T>::put(supersig_id + 1);
 
-			Self::deposit_event(Event::<T>::SupersigCreated(supersig_id));
+			Self::deposit_event(Event::<T>::SupersigCreated(supersig_account.clone()));
+			Self::deposit_event(Event::<T>::MembersAdded(supersig_account, added_members));
 
 			Ok(())
 		}
@@ -264,28 +297,31 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::submit_call(call.encode().len() as u32))]
 		pub fn submit_call(
 			origin: OriginFor<T>,
-			supersig_id: T::AccountId,
+			supersig_account: T::AccountId,
 			call: Box<<T as pallet::Config>::Call>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
-			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
 			let data = call.encode();
 
-			let deposit =
-				<BalanceOf<T>>::from(data.len() as u32).saturating_mul(T::PricePerBytes::get());
+			// Incentive to remove proposal that won't be accepted
+			let deposit = Self::compute_deposit(data.len())?;
 			T::Currency::reserve(&who, deposit)?;
 
+			// The encoded call is stored, along with the infos needed to unreserve the funds
+			// associated with it
+			let call_id = Self::nonce_call(supersig_id);
+			NonceCall::<T>::insert(supersig_id, call_id + 1);
 			let preimage = PreimageCall::<T::AccountId, BalanceOf<T>> {
 				data,
 				provider: who.clone(),
 				deposit,
 			};
-			let nonce = Self::nonce_call(supersig_index);
-			Calls::<T>::insert(supersig_index, nonce, preimage);
-			NonceCall::<T>::insert(supersig_index, nonce + 1);
+			Calls::<T>::insert(supersig_id, call_id, preimage);
 
-			Self::deposit_event(Event::<T>::CallSubmitted(supersig_id, nonce, who));
+			Self::deposit_event(Event::<T>::CallSubmitted(supersig_account, call_id, who));
+
 			Ok(())
 		}
 
@@ -305,48 +341,59 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::approve_call())]
 		pub fn approve_call(
 			origin: OriginFor<T>,
-			supersig_id: T::AccountId,
-			call_index: CallIndex,
+			supersig_account: T::AccountId,
+			call_id: CallId,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
-			let supersig = Self::supersigs(supersig_index).unwrap();
+			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
-			if !supersig.is_user_in_supersig(&who) {
-				return Err(Error::<T>::NotMember.into())
-			}
-
-			if Self::calls(supersig_index, call_index).is_none() {
+			if Self::calls(supersig_id, call_id).is_none() {
 				return Err(Error::<T>::CallNotFound.into())
 			}
-			if Self::users_votes((supersig_index, call_index, who.clone())) {
+			if Self::members_votes((supersig_id, call_id, who.clone())) {
 				return Err(Error::<T>::AlreadyVoted.into())
 			}
 
-			UsersVotes::<T>::insert((supersig_index, call_index, who.clone()), true);
-			Votes::<T>::mutate(supersig_index, call_index, |val| *val += 1);
+			// Different roles have different voting weight
+			let vote_weight = Self::compute_vote_weight(supersig_id, &who)?;
 
-			Self::deposit_event(Event::<T>::CallVoted(supersig_id, call_index, who));
+			// Update storages with the user vote
+			MembersVotes::<T>::insert((supersig_id, call_id, who.clone()), true);
+			Votes::<T>::mutate(supersig_id, call_id, |val| {
+				*val = val.saturating_add(vote_weight)
+			});
 
-			// cannot fail, as the supersig referenced by supersig_index exist (checked in
-			// get_supersig_index_from_id)
-			let supersig = Self::supersigs(supersig_index).unwrap();
-			let total_votes = Self::votes(supersig_index, call_index);
+			Self::deposit_event(Event::<T>::CallVoted(
+				supersig_account.clone(),
+				call_id,
+				who,
+			));
 
-			if total_votes >= (supersig.members.len() as u128 / 2 + 1) {
-				if let Some(preimage) = Self::calls(supersig_index, call_index) {
-					let supersig_id: T::AccountId =
-						T::PalletId::get().into_sub_account(supersig_index);
-					if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..]) {
-						T::Currency::unreserve(&preimage.provider, preimage.deposit);
+			let total_votes = Self::votes(supersig_id, call_id);
+			if total_votes >= (Self::total_members(supersig_id) / 2 + 1) {
+				if let Some(preimage) = Self::calls(supersig_id, call_id) {
+					// free storage and unreserve deposit
+					Self::unchecked_remove_call_from_storages(supersig_id, call_id);
+					T::Currency::unreserve(&preimage.provider, preimage.deposit);
 
-						let res = call
-							.dispatch(frame_system::RawOrigin::Signed(supersig_id.clone()).into())
+					// Try to decode and execute the call
+					let res = if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..])
+					{
+						Ok(call
+							.dispatch(
+								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
+							)
 							.map(|_| ())
-							.map_err(|e| e.error);
-						Self::unchecked_remove_call(supersig_index, call_index);
-						Self::deposit_event(Event::<T>::CallExecuted(supersig_id, call_index, res));
-					}
+							.map_err(|e| e.error))
+					} else {
+						Err(Error::<T>::BadEncodedCall.into())
+					};
+
+					Self::deposit_event(Event::<T>::CallExecutionAttempted(
+						supersig_account,
+						call_id,
+						res,
+					));
 				}
 			}
 
@@ -367,21 +414,24 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::remove_call())]
 		pub fn remove_call(
 			origin: OriginFor<T>,
-			supersig_id: T::AccountId,
-			call_index: CallIndex,
+			supersig_account: T::AccountId,
+			call_id: CallId,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
-			let preimage =
-				Self::calls(supersig_index, call_index).ok_or(Error::<T>::CallNotFound)?;
-			if who != supersig_id && who != preimage.provider {
+			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
+			let preimage = Self::calls(supersig_id, call_id).ok_or(Error::<T>::CallNotFound)?;
+
+			// Either the supersig or the user that created the vote can remove a call
+			if who != supersig_account && who != preimage.provider {
 				return Err(Error::<T>::NotAllowed.into())
 			}
-			Self::unchecked_remove_call(supersig_index, call_index);
 
+			// Clean up storage and release reserved funds
+			Self::unchecked_remove_call_from_storages(supersig_id, call_id);
 			T::Currency::unreserve(&preimage.provider, preimage.deposit);
 
-			Self::deposit_event(Event::<T>::CallRemoved(supersig_id, call_index));
+			Self::deposit_event(Event::<T>::CallRemoved(supersig_account, call_id));
+
 			Ok(())
 		}
 
@@ -393,33 +443,23 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the supersig
 		///
 		/// # <weight>
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::add_members(new_members.len() as u32))]
 		pub fn add_members(
 			origin: OriginFor<T>,
-			supersig_id: T::AccountId,
-			new_members: Vec<T::AccountId>,
+			new_members: BoundedVec<(T::AccountId, Role), T::MaxMembersPerTransaction>,
 		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			if who != supersig_id {
-				return Err(Error::<T>::NotAllowed.into())
-			}
-			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
-			let mut new_members = new_members;
-			// cannot fail, the supersig exist
-			let old_members = Self::supersigs(supersig_index).unwrap().members;
-			new_members.retain(|memb| !old_members.contains(memb));
-			let deposit = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
-				.saturating_mul((new_members.len() as u32).into())
-				.saturating_mul(T::PricePerBytes::get());
-			T::Currency::reserve(&supersig_id, deposit)?;
+			let supersig_account = ensure_signed(origin)?;
+			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
-			Supersigs::<T>::mutate(supersig_index, |wrapped_supersig| {
-				if let Some(supersig) = wrapped_supersig {
-					supersig.members.append(new_members.clone().as_mut());
-				}
-			});
+			// Update Members and TotalMembers storages
+			let added_members = Self::internal_add_members(supersig_id, new_members)?;
 
-			Self::deposit_event(Event::<T>::UsersAdded(supersig_id, new_members));
+			// Incentive to delete supersigs that are no longer used
+			let deposit = Self::compute_deposit(size_of::<T::AccountId>() * added_members.len())?;
+			Self::reserve_and_record_deposit(supersig_id, &supersig_account, deposit)?;
+
+			Self::deposit_event(Event::<T>::MembersAdded(supersig_account, added_members));
 
 			Ok(())
 		}
@@ -435,42 +475,38 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::remove_members(members_to_remove.len() as u32))]
 		pub fn remove_members(
 			origin: OriginFor<T>,
-			supersig_id: T::AccountId,
-			members_to_remove: Vec<T::AccountId>,
+			members_to_remove: BoundedVec<T::AccountId, T::MaxMembersPerTransaction>,
 		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			if who != supersig_id {
-				return Err(Error::<T>::NotAllowed.into())
-			}
-			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
-			let mut nb_removed: usize = 0;
+			let supersig_account = ensure_signed(origin)?;
+			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
-			Supersigs::<T>::try_mutate(supersig_index, |wrapped_supersig| {
-				if let Some(supersig) = wrapped_supersig {
-					let old_len = supersig.members.len();
-					supersig.members.retain(|memb| !members_to_remove.contains(memb));
-					nb_removed = old_len - supersig.members.len();
+			// Remeber the storage state before we remove the members from it
+			let total_deposit = Self::total_deposit(supersig_id);
+			let initial_total_members = Self::total_members(supersig_id);
 
-					if supersig.members.is_empty() {
-						return Err(())
-					}
-				}
-				Ok(())
-			})
-			.map_err(|_| Error::<T>::CannotRemoveUsers)?;
-			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
-				.saturating_mul((nb_removed as u32).into())
-				.saturating_mul(T::PricePerBytes::get());
-			T::Currency::unreserve(&who, reserve);
+			let removed_members = Self::internal_remove_members(supersig_id, members_to_remove)?;
 
-			Self::deposit_event(Event::<T>::UsersRemoved(supersig_id, members_to_remove));
+			// amount = total_deposit / initial_n_members * n_removed_members
+			let amount_to_unreserve = Self::compute_proportional_amount_to_unreserve(
+				total_deposit,
+				initial_total_members,
+				removed_members.len(),
+			)?;
+
+			// Release a proportional amount of deposit
+			Self::unreserve_and_record_deposit(supersig_id, &supersig_account, amount_to_unreserve);
+
+			Self::deposit_event(Event::<T>::MembersRemoved(
+				supersig_account,
+				removed_members,
+			));
 
 			Ok(())
 		}
 
 		/// remove the supersig
 		///
-		/// `remove_supersig` will remove every members, transfer every remanent funds to the
+		/// `delete_supersig` will remove every members, transfer every remanent funds to the
 		/// target account, remove the supersig from storage, and set the consumers and providers
 		/// to 0
 		///
@@ -478,46 +514,37 @@ pub mod pallet {
 		///
 		/// # <weight>
 		#[transactional]
-		#[pallet::weight(T::WeightInfo::remove_supersig())]
-		pub fn remove_supersig(
-			origin: OriginFor<T>,
-			supersig_id: T::AccountId,
-			beneficiary: T::AccountId,
-		) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-			if who != supersig_id {
-				return Err(Error::<T>::NotAllowed.into())
-			}
-			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
+		#[pallet::weight(T::WeightInfo::delete_supersig())]
+		pub fn delete_supersig(origin: OriginFor<T>, beneficiary: T::AccountId) -> DispatchResult {
+			let supersig_account = ensure_signed(origin)?;
+			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
-			// cannot fail, the supersig exist
-			let nb_members = Self::supersigs(supersig_index).unwrap().members.len();
-			let reserve = <BalanceOf<T>>::from(size_of::<T::AccountId>() as u32)
-				.saturating_mul((nb_members as u32).into())
-				.saturating_mul(T::PricePerBytes::get());
+			// Release all member related deposits
+			let total_deposit = TotalDeposit::<T>::take(supersig_id);
+			T::Currency::unreserve(&supersig_account, total_deposit);
 
-			let balance = T::Currency::total_balance(&supersig_id);
-			if balance != T::Currency::free_balance(&supersig_id).saturating_add(reserve) {
-				return Err(Error::<T>::CannotDeleteSupersig.into())
-			}
-			T::Currency::unreserve(&who, reserve);
+			// Release all call related deposits
+			Calls::<T>::iter_prefix_values(supersig_id).for_each(|preimage| {
+				T::Currency::unreserve(&preimage.provider, preimage.deposit);
+			});
 
-			NonceCall::<T>::remove(supersig_index);
-			Supersigs::<T>::remove(supersig_index);
-			Calls::<T>::remove_prefix(supersig_index, None);
-			Votes::<T>::remove_prefix(supersig_index, None);
-			UsersVotes::<T>::remove_prefix((supersig_index,), None);
+			// Erase trace of this supersis in storage and decrement the account reference counter
+			Self::unchecked_remove_supersig_from_storages(supersig_id, &supersig_account);
 
-			frame_system::Pallet::<T>::dec_consumers(&supersig_id);
-
+			// Empty the supersig account balance
+			// Will cause death of the account
+			// Will fail and revert the transaction if this account is not allowed to die
+			// due to an other pallet reference counter, reserved or frozen funds
 			T::Currency::transfer(
-				&supersig_id,
+				&supersig_account,
 				&beneficiary,
-				balance,
+				T::Currency::total_balance(&supersig_account),
 				ExistenceRequirement::AllowDeath,
-			)?;
+			)
+			.map_err(|_| Error::<T>::SupersigHaveLockedFunds)?;
 
-			Self::deposit_event(Event::<T>::SupersigRemoved(supersig_id));
+			Self::deposit_event(Event::<T>::SupersigRemoved(supersig_account));
+
 			Ok(())
 		}
 
@@ -528,50 +555,194 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the user.
 		///
 		/// # <weight>
-		#[transactional]
-		#[pallet::weight(T::WeightInfo::create_supersig())]
-		pub fn leave_supersig(origin: OriginFor<T>, supersig_id: T::AccountId) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::leave_supersig())]
+		pub fn leave_supersig(
+			origin: OriginFor<T>,
+			supersig_account: T::AccountId,
+		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
-			let supersig_index = Self::get_supersig_index_from_id(&supersig_id)?;
-			let supersig = Self::supersigs(supersig_index).unwrap();
-
-			if !supersig.is_user_in_supersig(&who) {
+			if Self::members(supersig_id, &who) == Role::NotMember {
 				return Err(Error::<T>::NotMember.into())
 			}
 
-			Supersigs::<T>::try_mutate(supersig_index, |wrapped_supersig| {
-				if let Some(supersig) = wrapped_supersig {
-					if supersig.members.len() <= 1 {
-						return Err(())
-					}
-					supersig.members.retain(|memb| memb != &who);
-				}
+			// Remeber the storage state before we remove the members from it
+			let total_deposit = Self::total_deposit(supersig_id);
+			let initial_total_members = Self::total_members(supersig_id);
+
+			// amount = total_deposit / initial_n_members * n_removed_members
+			let amount_to_unreserve = Self::compute_proportional_amount_to_unreserve(
+				total_deposit,
+				initial_total_members,
+				1,
+			)?;
+
+			// A supersig should at least have one member
+			TotalMembers::<T>::try_mutate(supersig_id, |nb| {
+				if *nb == 1 {
+					return Err(Error::<T>::InvalidNumberOfMembers)
+				};
+				*nb -= 1;
 				Ok(())
-			})
-			.map_err(|_| Error::<T>::CannotRemoveUsers)?;
-			Self::deposit_event(Event::<T>::SupersigLeaved(supersig_id, who));
+			})?;
+
+			// Note that the votes the user made stays in storage
+			Members::<T>::remove(supersig_id, &who);
+
+			// Release a proportional amount of deposit
+			Self::unreserve_and_record_deposit(supersig_id, &supersig_account, amount_to_unreserve);
+
+			Self::deposit_event(Event::<T>::SupersigLeaved(supersig_account, who));
 
 			Ok(())
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
-		pub fn get_supersig_index_from_id(id: &T::AccountId) -> Result<u128, pallet::Error<T>> {
-			if let Some((account, index)) = PalletId::try_from_sub_account(id) {
-				if account != T::PalletId::get() {
-					return Err(Error::<T>::SupersigNotFound)
+		fn get_supersig_id_from_account(
+			supersig_account: &T::AccountId,
+		) -> Result<SupersigId, pallet::Error<T>> {
+			if let Some((account, supersig_id)) = PalletId::try_from_sub_account(supersig_account) {
+				if account != T::PalletId::get() || Self::total_members(supersig_id) == 0 {
+					return Err(Error::<T>::NotSupersig)
 				}
-				Self::supersigs(index).map(|_| index).ok_or(Error::<T>::SupersigNotFound)
+				Ok(supersig_id)
 			} else {
-				Err(Error::<T>::SupersigNotFound)
+				Err(Error::<T>::NotSupersig)
 			}
 		}
 
-		pub fn unchecked_remove_call(supersig_index: u128, call_index: u128) {
-			Calls::<T>::remove(supersig_index, call_index);
-			Votes::<T>::remove(supersig_index, call_index);
-			UsersVotes::<T>::remove_prefix((supersig_index, call_index), None);
+		fn unchecked_remove_call_from_storages(supersig_id: SupersigId, call_id: CallId) {
+			Calls::<T>::remove(supersig_id, call_id);
+			Votes::<T>::remove(supersig_id, call_id);
+			MembersVotes::<T>::remove_prefix((supersig_id, call_id), None);
+		}
+
+		fn unchecked_remove_supersig_from_storages(
+			supersig_id: SupersigId,
+			supersig_account: &T::AccountId,
+		) {
+			NonceCall::<T>::remove(supersig_id);
+			Members::<T>::remove_prefix(supersig_id, None);
+			TotalMembers::<T>::remove(supersig_id);
+			Calls::<T>::remove_prefix(supersig_id, None);
+			Votes::<T>::remove_prefix(supersig_id, None);
+			MembersVotes::<T>::remove_prefix((supersig_id,), None);
+
+			frame_system::Pallet::<T>::dec_consumers(supersig_account);
+		}
+
+		fn internal_add_members(
+			supersig_id: SupersigId,
+			members: BoundedVec<(T::AccountId, Role), T::MaxMembersPerTransaction>,
+		) -> Result<Vec<(T::AccountId, Role)>, Error<T>> {
+			let mut added = Vec::new();
+
+			for (member, role) in members {
+				if Self::members(supersig_id, &member) == Role::NotMember {
+					added.push((member.clone(), role.clone()));
+				}
+				Members::<T>::insert(supersig_id, member, role);
+			}
+
+			TotalMembers::<T>::try_mutate(supersig_id, |n| {
+				*n = n
+					.checked_add(added.len().try_into().map_err(|_| Error::<T>::Conversion)?)
+					.ok_or(Error::<T>::Overflow)?;
+
+				Ok(())
+			})?;
+
+			Ok(added)
+		}
+
+		#[transactional]
+		fn internal_remove_members(
+			supersig_id: SupersigId,
+			members: BoundedVec<T::AccountId, T::MaxMembersPerTransaction>,
+		) -> Result<Vec<T::AccountId>, pallet::Error<T>> {
+			let mut removed = Vec::new();
+
+			for member in members {
+				if Self::members(supersig_id, &member) != Role::NotMember {
+					Members::<T>::remove(supersig_id, member.clone());
+					removed.push(member);
+				}
+			}
+
+			TotalMembers::<T>::try_mutate(supersig_id, |n| {
+				let new_total_members =
+					n.saturating_sub(removed.len().try_into().map_err(|_| Error::<T>::Conversion)?);
+				if new_total_members < 1 {
+					return Err(Error::<T>::InvalidNumberOfMembers)
+				}
+
+				*n = new_total_members;
+
+				Ok(())
+			})?;
+
+			Ok(removed)
+		}
+
+		fn compute_deposit(data_size: usize) -> Result<BalanceOf<T>, Error<T>> {
+			let bytes_stored: u32 = data_size.try_into().map_err(|_| Error::<T>::Conversion)?;
+
+			Ok(<BalanceOf<T>>::from(bytes_stored).saturating_mul(T::DepositPerByte::get()))
+		}
+
+		// this function can fail after a storage mutation.
+		// extrinsics that use it should have the #[transactional] annotation.
+		fn reserve_and_record_deposit(
+			supersig_id: SupersigId,
+			supersig_account: &T::AccountId,
+			deposit: BalanceOf<T>,
+		) -> DispatchResult {
+			T::Currency::reserve(supersig_account, deposit)?;
+			TotalDeposit::<T>::try_mutate(supersig_id, |val| {
+				*val = val.checked_add(&deposit).ok_or(Error::<T>::Overflow)?;
+				Ok(())
+			})
+		}
+
+		fn unreserve_and_record_deposit(
+			supersig_id: SupersigId,
+			supersig_account: &T::AccountId,
+			amount: BalanceOf<T>,
+		) {
+			T::Currency::unreserve(supersig_account, amount);
+			TotalDeposit::<T>::mutate(supersig_id, |val| *val = val.saturating_sub(amount));
+		}
+
+		fn compute_vote_weight(
+			supersig_id: SupersigId,
+			who: &T::AccountId,
+		) -> Result<u32, Error<T>> {
+			match Self::members(supersig_id, &who) {
+				Role::Standard => Ok(1),
+				Role::Master => Ok(max(Self::total_members(supersig_id) / 2, 1)),
+				Role::NotMember => Err(Error::<T>::NotMember),
+			}
+		}
+
+		pub fn compute_proportional_amount_to_unreserve(
+			total_deposit: BalanceOf<T>,
+			initial_total_members: u32,
+			removed_members: usize,
+		) -> Result<BalanceOf<T>, Error<T>> {
+			let amount_to_unreserve = total_deposit
+				.checked_div(
+					&<BalanceOf<T>>::try_from(initial_total_members)
+						.map_err(|_| Error::<T>::Conversion)?,
+				)
+				.ok_or(Error::<T>::Overflow)?
+				.checked_mul(
+					&<BalanceOf<T>>::try_from(removed_members)
+						.map_err(|_| Error::<T>::Conversion)?,
+				)
+				.ok_or(Error::<T>::Overflow)?;
+			Ok(amount_to_unreserve)
 		}
 	}
 }

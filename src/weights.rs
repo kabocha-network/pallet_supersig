@@ -31,84 +31,107 @@ use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
-    fn create_supersig() -> Weight;
+    fn create_supersig(z: u32) -> Weight;
     fn submit_call(z: u32) -> Weight;
     fn approve_call() -> Weight;
     fn remove_call() -> Weight;
     fn add_members(z: u32) -> Weight;
     fn remove_members(z: u32) -> Weight;
-    fn remove_supersig() -> Weight;
+    fn delete_supersig() -> Weight;
+    fn leave_supersig() -> Weight;
 }
 
 /// Weight functions for `pallet_supersig`.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Supersig NonceSupersig (r:1 w:1)
+	// Storage: Supersig Members (r:3 w:3)
+	// Storage: Supersig TotalMembers (r:1 w:1)
 	// Storage: System Account (r:2 w:2)
-	// Storage: Supersig Supersigs (r:0 w:1)
-	fn create_supersig() -> Weight {
-		(57_023_000u64)
-		    .saturating_add(T::DbWeight::get().reads(3u64))
-			.saturating_add(T::DbWeight::get().writes(4u64))
+	// Storage: Supersig TotalDeposit (r:1 w:1)
+	fn create_supersig(z: u32, ) -> Weight {
+		(104_842_000u64)
+			// Standard Error: 307_000
+			.saturating_add((4_138_000u64).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(8u64))
+			.saturating_add(T::DbWeight::get().reads((1u64).saturating_mul(z as Weight)))
+			.saturating_add(T::DbWeight::get().writes(8u64))
+			.saturating_add(T::DbWeight::get().writes((1u64).saturating_mul(z as Weight)))
 	}
-	// Storage: Supersig NonceSupersig (r:1 w:0)
-	// Storage: Supersig Supersigs (r:1 w:0)
-	// Storage: Supersig NonceCall (r:1 w:1)
+	// Storage: Supersig TotalMembers (r:1 w:0)
 	// Storage: System Account (r:1 w:1)
+	// Storage: Supersig NonceCall (r:1 w:1)
 	// Storage: Supersig Calls (r:0 w:1)
 	fn submit_call(z: u32, ) -> Weight {
-		(47_284_000u64)
+		(42_824_000u64)
 			// Standard Error: 0
 			.saturating_add((1_000u64).saturating_mul(z as Weight))
-			.saturating_add(T::DbWeight::get().reads(4u64))
+			.saturating_add(T::DbWeight::get().reads(3u64))
 			.saturating_add(T::DbWeight::get().writes(3u64))
 	}
-	// Storage: Supersig NonceSupersig (r:1 w:0)
-	// Storage: Supersig Supersigs (r:1 w:0)
+	// Storage: Supersig TotalMembers (r:1 w:0)
 	// Storage: Supersig Calls (r:1 w:0)
-	// Storage: Supersig UsersVotes (r:1 w:1)
+	// Storage: Supersig MembersVotes (r:1 w:1)
+	// Storage: Supersig Members (r:1 w:0)
 	// Storage: Supersig Votes (r:1 w:1)
 	fn approve_call() -> Weight {
-		(43_870_000u64)
-			// Standard Error: 0
-			.saturating_add(3_000u64)
+		(51_715_000u64)
 			.saturating_add(T::DbWeight::get().reads(5u64))
 			.saturating_add(T::DbWeight::get().writes(2u64))
 	}
-	// Storage: Supersig NonceSupersig (r:1 w:0)
+	// Storage: Supersig TotalMembers (r:1 w:0)
 	// Storage: Supersig Calls (r:1 w:1)
 	// Storage: System Account (r:1 w:1)
+	// Storage: Supersig MembersVotes (r:0 w:1)
+	// Storage: Supersig Votes (r:0 w:1)
 	fn remove_call() -> Weight {
-		(41_556_000u64)
-			// Standard Error: 0
-			.saturating_add(3_000u64)
+		(51_279_000u64)
 			.saturating_add(T::DbWeight::get().reads(3u64))
-			.saturating_add(T::DbWeight::get().writes(2u64))
+			.saturating_add(T::DbWeight::get().writes(4u64))
 	}
-	// Storage: Supersig NonceSupersig (r:1 w:0)
-	// Storage: Supersig Supersigs (r:1 w:1)
+	// Storage: Supersig TotalMembers (r:1 w:1)
+	// Storage: Supersig Members (r:3 w:3)
+	// Storage: Supersig TotalDeposit (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
 	fn add_members(z: u32, ) -> Weight {
-		(29_135_000u64)
-			// Standard Error: 0
-			.saturating_add((79_000u64).saturating_mul(z as Weight))
-			.saturating_add(T::DbWeight::get().reads(2u64))
-			.saturating_add(T::DbWeight::get().writes(1u64))
+		(57_370_000u64)
+			// Standard Error: 193_000
+			.saturating_add((7_111_000u64).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(6u64))
+			.saturating_add(T::DbWeight::get().reads((1u64).saturating_mul(z as Weight)))
+			.saturating_add(T::DbWeight::get().writes(6u64))
+			.saturating_add(T::DbWeight::get().writes((1u64).saturating_mul(z as Weight)))
 	}
-	// Storage: Supersig NonceSupersig (r:1 w:0)
-	// Storage: Supersig Supersigs (r:1 w:1)
+	// Storage: Supersig TotalMembers (r:1 w:1)
+	// Storage: Supersig TotalDeposit (r:1 w:1)
+	// Storage: Supersig Members (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
 	fn remove_members(z: u32, ) -> Weight {
-		(0u64)
-			// Standard Error: 2_310_000
-			.saturating_add((94_862_000u64).saturating_mul(z as Weight))
-			.saturating_add(T::DbWeight::get().reads(2u64))
-			.saturating_add(T::DbWeight::get().writes(1u64))
+		(39_597_000u64)
+			// Standard Error: 168_000
+			.saturating_add((7_678_000u64).saturating_mul(z as Weight))
+			.saturating_add(T::DbWeight::get().reads(3u64))
+			.saturating_add(T::DbWeight::get().reads((1u64).saturating_mul(z as Weight)))
+			.saturating_add(T::DbWeight::get().writes(3u64))
+			.saturating_add(T::DbWeight::get().writes((1u64).saturating_mul(z as Weight)))
 	}
-	// Storage: Supersig NonceSupersig (r:1 w:0)
+	// Storage: Supersig TotalMembers (r:1 w:1)
+	// Storage: Supersig TotalDeposit (r:1 w:1)
 	// Storage: System Account (r:2 w:2)
-	// Storage: Supersig Supersigs (r:1 w:1)
+	// Storage: Supersig Calls (r:1 w:0)
+	// Storage: Supersig Members (r:0 w:3)
 	// Storage: Supersig NonceCall (r:0 w:1)
-	fn remove_supersig() -> Weight {
-		(107_739_000u64)
+	fn delete_supersig() -> Weight {
+		(110_730_000u64)
+			.saturating_add(T::DbWeight::get().reads(5u64))
+			.saturating_add(T::DbWeight::get().writes(8u64))
+	}
+	// Storage: Supersig TotalMembers (r:1 w:1)
+	// Storage: Supersig Members (r:1 w:1)
+	// Storage: Supersig TotalDeposit (r:1 w:1)
+	// Storage: System Account (r:1 w:1)
+	fn leave_supersig() -> Weight {
+		(53_207_000u64)
 			.saturating_add(T::DbWeight::get().reads(4u64))
 			.saturating_add(T::DbWeight::get().writes(4u64))
 	}

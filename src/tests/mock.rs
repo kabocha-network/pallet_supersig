@@ -115,14 +115,16 @@ impl pallet_balances::Config for Test {
 parameter_types! {
 	pub const SupersigPalletId: PalletId = PalletId(*b"id/susig");
 	pub const SupersigPreimageByteDeposit: Balance = 1000;
+	pub const MaxMembersPerTransaction: u32 = 4;
 }
 
 impl pallet_supersig::Config for Test {
 	type Call = Call;
 	type Currency = Balances;
+	type DepositPerByte = SupersigPreimageByteDeposit;
 	type Event = Event;
+	type MaxMembersPerTransaction = MaxMembersPerTransaction;
 	type PalletId = SupersigPalletId;
-	type PricePerBytes = SupersigPreimageByteDeposit;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
 }
 
@@ -158,6 +160,15 @@ pub fn BOB() -> AccountId {
 pub fn CHARLIE() -> AccountId {
 	get_account_id_from_seed::<sr25519::Public>("Charlie")
 }
+#[allow(non_snake_case)]
+pub fn PAUL() -> AccountId {
+	get_account_id_from_seed::<sr25519::Public>("Paul")
+}
+#[allow(non_snake_case)]
+pub fn DONALD() -> AccountId {
+	get_account_id_from_seed::<sr25519::Public>("Donald")
+}
+
 pub struct ExtBuilder {
 	caps_endowed_accounts: Vec<(AccountId, u64)>,
 }
@@ -169,6 +180,8 @@ impl Default for ExtBuilder {
 				(ALICE(), 1_000_000),
 				(BOB(), 100_000),
 				(CHARLIE(), 101_000),
+				(PAUL(), 100_000),
+				(DONALD(), 100_000),
 			],
 		}
 	}
