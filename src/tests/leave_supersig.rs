@@ -12,20 +12,22 @@ fn leave_supersig() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap()
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 
 		assert_ok!(Supersig::leave_supersig(
 			Origin::signed(ALICE()),
-			supersig_id.clone()
+			supersig_account.clone()
 		));
 		assert_eq!(Supersig::members(0, ALICE()), Role::NotMember);
 		assert_eq!(Supersig::total_members(0), 2);
 
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::SupersigLeaved(supersig_id, ALICE()))
+			Event::Supersig(crate::Event::SupersigLeaved(supersig_account, ALICE()))
 		);
 	})
 }
@@ -38,12 +40,14 @@ fn leave_supersig_not_a_member() {
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap()
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 
 		assert_noop!(
-			Supersig::leave_supersig(Origin::signed(CHARLIE()), supersig_id),
+			Supersig::leave_supersig(Origin::signed(CHARLIE()), supersig_account),
 			Error::<Test>::NotMember
 		);
 	})
@@ -58,12 +62,14 @@ fn leave_unknown_supersig() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap()
 		));
-		let bad_supersig_id = get_account_id(1);
+		let bad_supersig_account = get_supersig_account(1);
 
 		assert_noop!(
-			Supersig::leave_supersig(Origin::signed(CHARLIE()), bad_supersig_id),
+			Supersig::leave_supersig(Origin::signed(CHARLIE()), bad_supersig_account),
 			Error::<Test>::NotSupersig
 		);
 	})
@@ -76,12 +82,14 @@ fn leave_supersig_last_user() {
 			Origin::signed(ALICE()),
 			vec! {
 				(ALICE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap()
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 
 		assert_noop!(
-			Supersig::leave_supersig(Origin::signed(ALICE()), supersig_id),
+			Supersig::leave_supersig(Origin::signed(ALICE()), supersig_account),
 			Error::<Test>::InvalidNumberOfMembers
 		);
 	})

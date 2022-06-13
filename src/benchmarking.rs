@@ -81,7 +81,6 @@ benchmarks! {
 			members)
 		);
 		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
-		assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice).into(), supersig_id.clone(), 0));
 	}: _(RawOrigin::Signed(bob.clone()), supersig_id, 0)
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
@@ -136,7 +135,7 @@ benchmarks! {
 		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
 		T::Currency::make_free_balance_be(&supersig_id, val.saturating_mul(4_000_000_000u32.into()));
 
-	}: _(RawOrigin::Signed(supersig_id.clone()), supersig_id.clone(), members.clone())
+	}: _(RawOrigin::Signed(supersig_id.clone()), members.clone())
 	verify {
 		assert_eq!(Pallet::<T>::total_members(0), 3 + z);
 	}
@@ -160,8 +159,8 @@ benchmarks! {
 		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
 		T::Currency::make_free_balance_be(&supersig_id, val.saturating_mul(4_000_000_000u32.into()));
 
-		assert_ok!(Pallet::<T>::add_members(RawOrigin::Signed(supersig_id.clone()).into(), supersig_id.clone(), members_and_roles.clone()));
-	}: _(RawOrigin::Signed(supersig_id.clone()), supersig_id.clone(), members.clone())
+		assert_ok!(Pallet::<T>::add_members(RawOrigin::Signed(supersig_id.clone()).into(), members_and_roles.clone()));
+	}: _(RawOrigin::Signed(supersig_id.clone()), members.clone())
 	verify {
 		assert_eq!(Pallet::<T>::members(0, alice), Role::Standard);
 		assert_eq!(Pallet::<T>::members(0, bob), Role::Standard);
@@ -182,7 +181,7 @@ benchmarks! {
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice).into(),
 			members)
 		);
-	}: _(RawOrigin::Signed(supersig_id.clone()), supersig_id.clone(), bob)
+	}: _(RawOrigin::Signed(supersig_id.clone()), bob)
 	verify {
 
 		assert_eq!(Pallet::<T>::total_members(0), 0);

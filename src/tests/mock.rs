@@ -121,10 +121,10 @@ parameter_types! {
 impl pallet_supersig::Config for Test {
 	type Call = Call;
 	type Currency = Balances;
+	type DepositPerByte = SupersigPreimageByteDeposit;
 	type Event = Event;
 	type MaxMembersPerTransaction = MaxMembersPerTransaction;
 	type PalletId = SupersigPalletId;
-	type DepositPerByte = SupersigPreimageByteDeposit;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
 }
 

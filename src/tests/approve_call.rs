@@ -18,21 +18,23 @@ fn approve_call() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 		let call = Call::Nothing(NoCall::do_nothing {
 			nothing: "test".into(),
 		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			Box::new(call)
 		));
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			0
 		));
 		assert_eq!(Supersig::votes(0, 0), 1);
@@ -41,7 +43,7 @@ fn approve_call() {
 		assert!(!Supersig::members_votes((0, 0, BOB())));
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallVoted(supersig_id, 0, ALICE()))
+			Event::Supersig(crate::Event::CallVoted(supersig_account, 0, ALICE()))
 		);
 	})
 }
@@ -55,12 +57,14 @@ fn approve_call_until_threshold() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			100_000
 		));
 
@@ -73,19 +77,19 @@ fn approve_call_until_threshold() {
 
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			Box::new(call)
 		));
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(BOB()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			0
 		));
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			0
 		));
 
@@ -103,7 +107,11 @@ fn approve_call_until_threshold() {
 		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallExecuted(supersig_id, 0, Ok(())))
+			Event::Supersig(crate::Event::CallExecutionAttempted(
+				supersig_account,
+				0,
+				Ok(Ok(()))
+			))
 		);
 	})
 }
@@ -115,14 +123,17 @@ fn approve_call_as_master() {
 			Origin::signed(ALICE()),
 			vec! {
 				(ALICE(), Role::Standard),
-				(BOB(), Role::Standard),
+				(BOB(), Role::Master),
 				(CHARLIE(), Role::Standard),
-			},
+				(PAUL(), Role::Standard),
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			100_000
 		));
 
@@ -135,19 +146,18 @@ fn approve_call_as_master() {
 
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			Box::new(call)
 		));
 
 		assert_ok!(Supersig::approve_call(
-			Origin::signed(BOB()),
-			supersig_id.clone(),
+			Origin::signed(ALICE()),
+			supersig_account.clone(),
 			0
 		));
-
 		assert_ok!(Supersig::approve_call(
-			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			Origin::signed(BOB()),
+			supersig_account.clone(),
 			0
 		));
 
@@ -165,7 +175,11 @@ fn approve_call_as_master() {
 		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallExecuted(supersig_id, 0, Ok(())))
+			Event::Supersig(crate::Event::CallExecutionAttempted(
+				supersig_account,
+				0,
+				Ok(Ok(()))
+			))
 		);
 	});
 }
@@ -179,20 +193,22 @@ fn approve_supersig_doesnt_exist() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 
 		let call = Call::Nothing(NoCall::do_nothing {
 			nothing: "test".into(),
 		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(CHARLIE()),
-			supersig_id,
+			supersig_account,
 			Box::new(call)
 		));
 		assert_noop!(
-			Supersig::approve_call(Origin::signed(CHARLIE()), get_account_id(3), 0),
+			Supersig::approve_call(Origin::signed(CHARLIE()), get_supersig_account(3), 0),
 			Error::<Test>::NotSupersig
 		);
 	})
@@ -207,25 +223,27 @@ fn user_already_voted() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 
 		let call = Call::Nothing(NoCall::do_nothing {
 			nothing: "test".into(),
 		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(CHARLIE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			Box::new(call)
 		));
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(CHARLIE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			0
 		));
 		assert_noop!(
-			Supersig::approve_call(Origin::signed(CHARLIE()), supersig_id, 0),
+			Supersig::approve_call(Origin::signed(CHARLIE()), supersig_account, 0),
 			Error::<Test>::AlreadyVoted
 		);
 	})
@@ -239,20 +257,22 @@ fn approve_not_a_member() {
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 
 		let call = Call::Nothing(NoCall::do_nothing {
 			nothing: "test".into(),
 		});
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			Box::new(call)
 		));
 		assert_noop!(
-			Supersig::approve_call(Origin::signed(CHARLIE()), supersig_id, 0),
+			Supersig::approve_call(Origin::signed(CHARLIE()), supersig_account, 0),
 			Error::<Test>::NotMember
 		);
 	})

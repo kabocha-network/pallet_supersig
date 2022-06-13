@@ -9,14 +9,14 @@ fn add_members() {
 		let members = vec![(ALICE(), Role::Standard), (BOB(), Role::Standard)].try_into().unwrap();
 		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), members,));
 
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			100_000
 		));
 		assert_ok!(Supersig::add_members(
-			Origin::signed(supersig_id.clone()),
+			Origin::signed(supersig_account.clone()),
 			vec!((BOB(), Role::Master), (CHARLIE(), Role::Standard)).try_into().unwrap()
 		));
 
@@ -28,11 +28,11 @@ fn add_members() {
 		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
 			.saturating_mul((Supersig::total_members(0) as u32).into())
 			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
-		assert_eq!(Balances::reserved_balance(get_account_id(0)), deposit);
+		assert_eq!(Balances::reserved_balance(get_supersig_account(0)), deposit);
 		assert_eq!(
 			last_event(),
 			Event::Supersig(crate::Event::MembersAdded(
-				supersig_id,
+				supersig_account,
 				vec!((CHARLIE(), Role::Standard))
 			))
 		);
@@ -64,9 +64,9 @@ fn add_users_unknown_supersig() {
 			Origin::signed(ALICE()),
 			members.clone()
 		));
-		let bad_supersig_id = get_account_id(1);
+		let bad_supersig_account = get_supersig_account(1);
 		assert_noop!(
-			Supersig::add_members(Origin::signed(bad_supersig_id.clone()), members),
+			Supersig::add_members(Origin::signed(bad_supersig_account), members),
 			Error::<Test>::NotSupersig
 		);
 	})

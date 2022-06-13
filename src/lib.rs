@@ -57,8 +57,8 @@ pub use pallet::*;
 #[cfg(test)]
 mod tests;
 
-// #[cfg(feature = "runtime-benchmarks")]
-// mod benchmarking;
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 pub use frame_support::{
 	dispatch::DispatchResult,
@@ -106,7 +106,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type DepositPerByte: Get<BalanceOf<Self>>;
 
-		/// The maximum number of accout that can added or removed in a single call
+		/// The maximum number of account that can added or removed in a single call
 		#[pallet::constant]
 		type MaxMembersPerTransaction: Get<u32>;
 
@@ -248,7 +248,7 @@ pub mod pallet {
 			// A supersig should at least have one member
 			let member_length = members.len();
 			if member_length < 1 {
-				return Err(Error::<T>::InvalidNumberOfMembers.into());
+				return Err(Error::<T>::InvalidNumberOfMembers.into())
 			}
 
 			// Get it id and associated account
@@ -348,14 +348,14 @@ pub mod pallet {
 			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
 			if Self::calls(supersig_id, call_id).is_none() {
-				return Err(Error::<T>::CallNotFound.into());
+				return Err(Error::<T>::CallNotFound.into())
 			}
 			if Self::members_votes((supersig_id, call_id, who.clone())) {
-				return Err(Error::<T>::AlreadyVoted.into());
+				return Err(Error::<T>::AlreadyVoted.into())
 			}
 
 			// Different roles have different voting weight
-			let vote_weight = Self::calc_vote_weight(supersig_id, &who)?;
+			let vote_weight = Self::compute_vote_weight(supersig_id, &who)?;
 
 			// Update storages with the user vote
 			MembersVotes::<T>::insert((supersig_id, call_id, who.clone()), true);
@@ -423,7 +423,7 @@ pub mod pallet {
 
 			// Either the supersig or the user that created the vote can remove a call
 			if who != supersig_account && who != preimage.provider {
-				return Err(Error::<T>::NotAllowed.into());
+				return Err(Error::<T>::NotAllowed.into())
 			}
 
 			// Clean up storage and release reserved funds
@@ -443,6 +443,7 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the supersig
 		///
 		/// # <weight>
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::add_members(new_members.len() as u32))]
 		pub fn add_members(
 			origin: OriginFor<T>,
@@ -486,17 +487,11 @@ pub mod pallet {
 			let removed_members = Self::internal_remove_members(supersig_id, members_to_remove)?;
 
 			// amount = total_deposit / initial_n_members * n_removed_members
-			let amount_to_unreserve = total_deposit
-				.checked_div(
-					&<BalanceOf<T>>::try_from(initial_total_members)
-						.map_err(|_| Error::<T>::Conversion)?,
-				)
-				.ok_or(Error::<T>::Overflow)?
-				.checked_mul(
-					&<BalanceOf<T>>::try_from(removed_members.len())
-						.map_err(|_| Error::<T>::Conversion)?,
-				)
-				.ok_or(Error::<T>::Overflow)?;
+			let amount_to_unreserve = Self::compute_proportional_amount_to_unreserve(
+				total_deposit,
+				initial_total_members,
+				removed_members.len(),
+			)?;
 
 			// Release a proportional amount of deposit
 			Self::unreserve_and_record_deposit(supersig_id, &supersig_account, amount_to_unreserve);
@@ -545,7 +540,8 @@ pub mod pallet {
 				&beneficiary,
 				T::Currency::total_balance(&supersig_account),
 				ExistenceRequirement::AllowDeath,
-			)?;
+			)
+			.map_err(|_| Error::<T>::SupersigHaveLockedFunds)?;
 
 			Self::deposit_event(Event::<T>::SupersigRemoved(supersig_account));
 
@@ -559,7 +555,6 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the user.
 		///
 		/// # <weight>
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::leave_supersig())]
 		pub fn leave_supersig(
 			origin: OriginFor<T>,
@@ -569,21 +564,34 @@ pub mod pallet {
 			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
 			if Self::members(supersig_id, &who) == Role::NotMember {
-				return Err(Error::<T>::NotMember.into());
+				return Err(Error::<T>::NotMember.into())
 			}
+
+			// Remeber the storage state before we remove the members from it
+			let total_deposit = Self::total_deposit(supersig_id);
+			let initial_total_members = Self::total_members(supersig_id);
+
+			// amount = total_deposit / initial_n_members * n_removed_members
+			let amount_to_unreserve = Self::compute_proportional_amount_to_unreserve(
+				total_deposit,
+				initial_total_members,
+				1,
+			)?;
 
 			// A supersig should at least have one member
 			TotalMembers::<T>::try_mutate(supersig_id, |nb| {
 				if *nb == 1 {
-					return Err(Error::<T>::InvalidNumberOfMembers);
+					return Err(Error::<T>::InvalidNumberOfMembers)
 				};
-
 				*nb -= 1;
-
 				Ok(())
 			})?;
+
 			// Note that the votes the user made stays in storage
 			Members::<T>::remove(supersig_id, &who);
+
+			// Release a proportional amount of deposit
+			Self::unreserve_and_record_deposit(supersig_id, &supersig_account, amount_to_unreserve);
 
 			Self::deposit_event(Event::<T>::SupersigLeaved(supersig_account, who));
 
@@ -597,7 +605,7 @@ pub mod pallet {
 		) -> Result<SupersigId, pallet::Error<T>> {
 			if let Some((account, supersig_id)) = PalletId::try_from_sub_account(supersig_account) {
 				if account != T::PalletId::get() || Self::total_members(supersig_id) == 0 {
-					return Err(Error::<T>::NotSupersig);
+					return Err(Error::<T>::NotSupersig)
 				}
 				Ok(supersig_id)
 			} else {
@@ -667,7 +675,7 @@ pub mod pallet {
 				let new_total_members =
 					n.saturating_sub(removed.len().try_into().map_err(|_| Error::<T>::Conversion)?);
 				if new_total_members < 1 {
-					return Err(Error::<T>::InvalidNumberOfMembers);
+					return Err(Error::<T>::InvalidNumberOfMembers)
 				}
 
 				*n = new_total_members;
@@ -684,6 +692,8 @@ pub mod pallet {
 			Ok(<BalanceOf<T>>::from(bytes_stored).saturating_mul(T::DepositPerByte::get()))
 		}
 
+		// this function can fail after a storage mutation.
+		// extrinsics that use it should have the #[transactional] annotation.
 		fn reserve_and_record_deposit(
 			supersig_id: SupersigId,
 			supersig_account: &T::AccountId,
@@ -705,12 +715,34 @@ pub mod pallet {
 			TotalDeposit::<T>::mutate(supersig_id, |val| *val = val.saturating_sub(amount));
 		}
 
-		fn calc_vote_weight(supersig_id: SupersigId, who: &T::AccountId) -> Result<u32, Error<T>> {
+		fn compute_vote_weight(
+			supersig_id: SupersigId,
+			who: &T::AccountId,
+		) -> Result<u32, Error<T>> {
 			match Self::members(supersig_id, &who) {
 				Role::Standard => Ok(1),
 				Role::Master => Ok(max(Self::total_members(supersig_id) / 2, 1)),
 				Role::NotMember => Err(Error::<T>::NotMember),
 			}
+		}
+
+		pub fn compute_proportional_amount_to_unreserve(
+			total_deposit: BalanceOf<T>,
+			initial_total_members: u32,
+			removed_members: usize,
+		) -> Result<BalanceOf<T>, Error<T>> {
+			let amount_to_unreserve = total_deposit
+				.checked_div(
+					&<BalanceOf<T>>::try_from(initial_total_members)
+						.map_err(|_| Error::<T>::Conversion)?,
+				)
+				.ok_or(Error::<T>::Overflow)?
+				.checked_mul(
+					&<BalanceOf<T>>::try_from(removed_members)
+						.map_err(|_| Error::<T>::Conversion)?,
+				)
+				.ok_or(Error::<T>::Overflow)?;
+			Ok(amount_to_unreserve)
 		}
 	}
 }

@@ -12,19 +12,20 @@ fn delete_supersig() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap()
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 		let bob_balance = Balances::free_balance(BOB());
 		let amount = 10_000u64;
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			amount
 		));
 		assert_ok!(Supersig::delete_supersig(
-			Origin::signed(supersig_id.clone()),
-			supersig_id.clone(),
+			Origin::signed(supersig_account.clone()),
 			BOB()
 		));
 
@@ -32,7 +33,10 @@ fn delete_supersig() {
 		assert_eq!(Supersig::nonce_call(0), 0);
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Supersig::votes(0, 0), 0);
-		assert_eq!(frame_system::Pallet::<Test>::providers(&supersig_id), 0);
+		assert_eq!(
+			frame_system::Pallet::<Test>::providers(&supersig_account),
+			0
+		);
 
 		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
 			.saturating_mul((3u32).into())
@@ -43,7 +47,7 @@ fn delete_supersig() {
 		);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::SupersigRemoved(supersig_id))
+			Event::Supersig(crate::Event::SupersigRemoved(supersig_account))
 		);
 	})
 }
@@ -57,9 +61,11 @@ fn delete_supersig_with_call() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap()
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 		let bob_balance = Balances::free_balance(BOB());
 		let amount = 10_000u64;
 		let call = Call::Nothing(NoCall::do_nothing {
@@ -67,17 +73,16 @@ fn delete_supersig_with_call() {
 		});
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			amount
 		));
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(BOB()),
-			supersig_id.clone(),
-			Box::new(call.clone())
+			supersig_account.clone(),
+			Box::new(call)
 		));
 		assert_ok!(Supersig::delete_supersig(
-			Origin::signed(supersig_id.clone()),
-			supersig_id.clone(),
+			Origin::signed(supersig_account.clone()),
 			BOB()
 		));
 
@@ -85,7 +90,10 @@ fn delete_supersig_with_call() {
 		assert_eq!(Supersig::nonce_call(0), 0);
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Supersig::votes(0, 0), 0);
-		assert_eq!(frame_system::Pallet::<Test>::providers(&supersig_id), 0);
+		assert_eq!(
+			frame_system::Pallet::<Test>::providers(&supersig_account),
+			0
+		);
 
 		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
 			.saturating_mul((3u32).into())
@@ -97,26 +105,7 @@ fn delete_supersig_with_call() {
 		assert_eq!(Balances::reserved_balance(BOB()), 0);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::SupersigRemoved(supersig_id))
-		);
-	})
-}
-
-#[test]
-fn delete_supersig_not_allowed() {
-	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
-			vec! {
-				(ALICE(), Role::Standard),
-				(BOB(), Role::Standard),
-				(CHARLIE(), Role::Standard),
-			},
-		));
-		let supersig_id = get_account_id(0);
-		assert_noop!(
-			Supersig::delete_supersig(Origin::signed(ALICE()), supersig_id, BOB()),
-			Error::<Test>::NotAllowed
+			Event::Supersig(crate::Event::SupersigRemoved(supersig_account))
 		);
 	})
 }
@@ -130,15 +119,13 @@ fn delete_supersig_unknown_supersig() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap()
 		));
-		let bad_supersig_id = get_account_id(1);
+		let bad_supersig_account = get_supersig_account(1);
 		assert_noop!(
-			Supersig::delete_supersig(
-				Origin::signed(bad_supersig_id.clone()),
-				bad_supersig_id,
-				BOB()
-			),
+			Supersig::delete_supersig(Origin::signed(bad_supersig_account), BOB()),
 			Error::<Test>::NotSupersig
 		);
 	})
@@ -153,18 +140,20 @@ fn cannot_delete_supersig() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap()
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 		let amount = 10_000u64;
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			amount
 		));
-		assert_ok!(Balances::reserve(&supersig_id, amount));
+		assert_ok!(Balances::reserve(&supersig_account, amount));
 		assert_noop!(
-			Supersig::delete_supersig(Origin::signed(supersig_id.clone()), supersig_id, BOB()),
+			Supersig::delete_supersig(Origin::signed(supersig_account), BOB()),
 			Error::<Test>::SupersigHaveLockedFunds
 		);
 	})
@@ -179,9 +168,11 @@ fn cannot_liquidate_supersig() {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
 				(CHARLIE(), Role::Standard),
-			},
+			}
+			.try_into()
+			.unwrap()
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 
 		let call = Call::Balances(pallet_balances::Call::transfer_all {
 			dest: ALICE(),
@@ -190,24 +181,24 @@ fn cannot_liquidate_supersig() {
 
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			Box::new(call)
 		));
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(BOB()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			0
 		));
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(CHARLIE()),
-			supersig_id.clone(),
+			supersig_account.clone(),
 			0
 		));
 
 		assert!(Supersig::calls(0, 0).is_none());
 
-		assert!(System::account_exists(&supersig_id));
+		assert!(System::account_exists(&supersig_account));
 	});
 }
