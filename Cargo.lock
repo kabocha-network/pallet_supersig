@@ -1203,9 +1203,26 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-balances",
+ "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-transaction-payment"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16#19162e43be45817b44c7d48e50d03f074f60fbf4"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "smallvec",
  "sp-core",
  "sp-io",
  "sp-runtime",

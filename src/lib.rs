@@ -64,14 +64,16 @@ pub use frame_support::{
 	dispatch::DispatchResult,
 	traits::{tokens::ExistenceRequirement, Currency, ReservableCurrency},
 	transactional,
-	weights::{GetDispatchInfo, PostDispatchInfo},
+	weights::{
+		DispatchClass, DispatchInfo, GetDispatchInfo, PostDispatchInfo, WeightToFeePolynomial,
+	},
 	PalletId,
 };
 pub use sp_core::Hasher;
 
 pub use sp_runtime::traits::{
-	AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Dispatchable, Hash,
-	Saturating,
+	AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, DispatchInfoOf,
+	Dispatchable, Hash, Saturating, SignedExtension,
 };
 pub use sp_std::{boxed::Box, cmp::max, mem::size_of, prelude::Vec};
 
@@ -88,19 +90,24 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
 		/// the obiquitous event type
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
 		/// The trait to manage funds
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+
+		/// The call type
+		type Call: Parameter
+			+ Dispatchable<Origin = Self::Origin, Info = DispatchInfo, PostInfo = PostDispatchInfo>
+			+ GetDispatchInfo
+			+ IsType<<Self as frame_system::Config>::Call>;
+
+		type OnChargeVotedCall: Nope<Self>;
+
 		/// The base id used for accountId calculation
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-		/// The call type
-		type Call: Parameter
-			+ Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
-			+ GetDispatchInfo
-			+ From<frame_system::Call<Self>>;
 
 		/// The amount of balance that must be deposited per bytes stored
 		#[pallet::constant]
@@ -293,7 +300,7 @@ pub mod pallet {
 		/// # <weight>
 		///
 		/// Related functions:
-		/// - `Currency::reserve` will be called once to lock the deposit amount
+		//&/ - `Currency::reserve` will be called once to lock the deposit amount
 		#[pallet::weight(T::WeightInfo::submit_call(call.encode().len() as u32))]
 		pub fn submit_call(
 			origin: OriginFor<T>,
@@ -711,6 +718,29 @@ pub mod pallet {
 				Role::Master => Ok(max(Self::total_members(supersig_id) / 2, 1)),
 				Role::NotMember => Err(Error::<T>::NotMember),
 			}
+		}
+
+		fn calc_fees(len: usize, weight: Weight, class: DispatchClass) -> BalanceOf<T> {
+			let len = <BalanceOf<T>>::from(len);
+			let per_byte = T::TransactionByteFee::get();
+
+			// length fee. this is not adjusted.
+			let fixed_len_fee = per_byte.saturating_mul(len);
+
+			// the adjustable part of the fee.
+			let unadjusted_weight_fee = Self::weight_to_fee(weight);
+			let multiplier = Self::next_fee_multiplier();
+			// final adjusted weight fee.
+			let adjusted_weight_fee = multiplier.saturating_mul_int(unadjusted_weight_fee);
+
+			let base_fee = Self::weight_to_fee(T::BlockWeights::get().get(class).base_extrinsic);
+		}
+
+		fn weight_to_fee(weight: Weight) -> BalanceOf<T> {
+			// cap the weight to the maximum defined in runtime, otherwise it will be the
+			// `Bounded` maximum of its data type, which is not desired.
+			let capped_weight = weight.min(T::BlockWeights::get().max_block);
+			<T as pallet_transaction_payment::Config>::WeightToFee::calc(&capped_weight)
 		}
 	}
 }
