@@ -80,7 +80,7 @@ benchmarks! {
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
 			members)
 		);
-		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
+		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice).into(), supersig_id.clone(), Box::new(call)));
 	}: _(RawOrigin::Signed(bob.clone()), supersig_id, 0)
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
