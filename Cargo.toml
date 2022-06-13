@@ -28,8 +28,8 @@ sp-core = { git = "https://github.com/paritytech/substrate", default-features = 
 
 [dev-dependencies]
 serde = { version = "1.0.132" }
-sp-io = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "release-v0.9.23" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "release-v0.9.23" }
+sp-io = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.23" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.23" }
 
 [features]
 default = ["std", "runtime-benchmarks"]
