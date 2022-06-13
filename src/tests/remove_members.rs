@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::{Config as SuperConfig, Error};
+use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::{boxed::Box, mem::size_of};
 
@@ -8,25 +8,34 @@ fn remove_members() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB(), CHARLIE()),
+			vec! {
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
+				(PAUL(), Role::Standard),
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 		assert_ok!(Supersig::remove_members(
-			Origin::signed(supersig_id.clone()),
-			supersig_id.clone(),
-			vec!(BOB(), CHARLIE())
+			Origin::signed(supersig_account.clone()),
+			vec!(BOB(), CHARLIE(), CHARLIE()).try_into().unwrap()
 		));
-		let supersig = Supersig::supersigs(0).unwrap();
-		assert_eq!(supersig.members, vec!(ALICE()));
+		assert_eq!(Supersig::members(0, ALICE()), Role::Standard);
+		assert_eq!(Supersig::members(0, BOB()), Role::NotMember);
+		assert_eq!(Supersig::members(0, CHARLIE()), Role::NotMember);
+		assert_eq!(Supersig::members(0, PAUL()), Role::Standard);
+		assert_eq!(Supersig::total_members(0), 2);
 
 		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
-			.saturating_mul((supersig.members.len() as u32).into())
-			.saturating_mul(<Test as SuperConfig>::PricePerBytes::get());
-		assert_eq!(Balances::reserved_balance(get_account_id(0)), reserve);
+			.saturating_mul((Supersig::total_members(0) as u32).into())
+			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
+		assert_eq!(Balances::reserved_balance(get_supersig_account(0)), reserve);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::UsersRemoved(
-				supersig_id,
+			Event::Supersig(crate::Event::MembersRemoved(
+				supersig_account,
 				vec!(BOB(), CHARLIE())
 			))
 		);
@@ -38,12 +47,21 @@ fn remove_users_not_allowed() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB()),
+			vec! {
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
+				(PAUL(), Role::Standard),
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
 		assert_noop!(
-			Supersig::remove_members(Origin::signed(ALICE()), supersig_id, vec!(BOB(), CHARLIE())),
-			Error::<Test>::NotAllowed
+			Supersig::remove_members(
+				Origin::signed(ALICE()),
+				vec!(BOB(), CHARLIE()).try_into().unwrap()
+			),
+			Error::<Test>::NotSupersig
 		);
 	})
 }
@@ -53,16 +71,22 @@ fn remove_users_unknown_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB()),
+			vec! {
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
+				(PAUL(), Role::Standard),
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let bad_supersig_id = get_account_id(1);
+		let bad_supersig_account = get_supersig_account(1);
 		assert_noop!(
 			Supersig::remove_members(
-				Origin::signed(bad_supersig_id.clone()),
-				bad_supersig_id,
-				vec!(BOB(), CHARLIE())
+				Origin::signed(bad_supersig_account),
+				vec!(BOB(), CHARLIE()).try_into().unwrap()
 			),
-			Error::<Test>::SupersigNotFound
+			Error::<Test>::NotSupersig
 		);
 	})
 }
@@ -72,16 +96,20 @@ fn remove_users_leaving_0_users() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			Origin::signed(ALICE()),
-			vec!(ALICE(), BOB()),
+			vec! {
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+			}
+			.try_into()
+			.unwrap(),
 		));
-		let supersig_id = get_account_id(0);
+		let supersig_account = get_supersig_account(0);
 		assert_noop!(
 			Supersig::remove_members(
-				Origin::signed(supersig_id.clone()),
-				supersig_id,
-				vec!(ALICE(), BOB())
+				Origin::signed(supersig_account),
+				vec!(ALICE(), BOB()).try_into().unwrap()
 			),
-			Error::<Test>::CannotRemoveUsers
+			Error::<Test>::InvalidNumberOfMembers
 		);
 	})
 }

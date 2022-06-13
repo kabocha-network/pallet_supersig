@@ -2,10 +2,10 @@
 name = "pallet-supersig"
 authors = ["Nathan GD <https://github.com/gdnathan>"]
 description = "Pallet Supersig like multisig but with superpowers! Credit goes to Nathan GD for building, Timothee Delabro for supervising; Web3 Foundation and Edgeware for supporting, and Decentration as project and product design/management."
-version = "0.1.0"
-license = "Apache 2.0"
-homepage = "https://decentration.org"
-repository = "https://github.com/kabocha-network/pallet-supersig"
+version = "1.1.0"
+license = "Unlicense"
+homepage = "https://substrate.io"
+repository = "https://github.com/paritytech/substrate/"
 edition = "2021"
 
 [package.metadata.docs.rs]
