@@ -472,6 +472,7 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the supersig
 		///
 		/// # <weight>
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::remove_members(members_to_remove.len() as u32))]
 		pub fn remove_members(
 			origin: OriginFor<T>,
@@ -657,7 +658,6 @@ pub mod pallet {
 			Ok(added)
 		}
 
-		#[transactional]
 		fn internal_remove_members(
 			supersig_id: SupersigId,
 			members: BoundedVec<T::AccountId, T::MaxAccountsPerTransaction>,
