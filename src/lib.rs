@@ -217,6 +217,8 @@ pub mod pallet {
 		Overflow,
 		/// could not execute the call because it was incorrectly encoded
 		BadEncodedCall,
+		/// no more valid supersig nonce
+		InvalidNonce,
 	}
 
 	#[pallet::call]
@@ -253,7 +255,9 @@ pub mod pallet {
 
 			// Get it id and associated account
 			let supersig_id = Self::nonce_supersig();
-			let supersig_account: T::AccountId = T::PalletId::get().into_sub_account(supersig_id);
+			let supersig_account: T::AccountId = T::PalletId::get()
+				.try_into_sub_account(supersig_id)
+				.ok_or(Error::<T>::InvalidNonce)?;
 
 			// Update Members and TotalMembers storages
 			let added_members = Self::internal_add_members(supersig_id, members)?;
@@ -472,6 +476,7 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the supersig
 		///
 		/// # <weight>
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::remove_members(members_to_remove.len() as u32))]
 		pub fn remove_members(
 			origin: OriginFor<T>,
@@ -657,7 +662,6 @@ pub mod pallet {
 			Ok(added)
 		}
 
-		#[transactional]
 		fn internal_remove_members(
 			supersig_id: SupersigId,
 			members: BoundedVec<T::AccountId, T::MaxAccountsPerTransaction>,
