@@ -1,12 +1,19 @@
-use crate as pallet_supersig;
+use crate::{self as pallet_supersig, CurrencyAdapter};
+use frame_support::traits::{Imbalance, OnUnbalanced};
+use frame_support::weights::{
+	WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
+};
 use frame_support::{parameter_types, traits::Everything, PalletId};
 use frame_system as system;
+use smallvec::smallvec;
 use sp_core::{sr25519, Pair, Public, H256};
+use sp_runtime::Perbill;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 	MultiSignature,
 };
+use sp_std::cell::RefCell;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -116,6 +123,40 @@ parameter_types! {
 	pub const SupersigPalletId: PalletId = PalletId(*b"id/susig");
 	pub const SupersigPreimageByteDeposit: Balance = 1000;
 	pub const MaxAccountsPerTransaction: u32 = 4;
+	pub static TransactionByteFee: u64 = 1;
+	pub static WeightToFee: u64 = 1;
+}
+
+thread_local! {
+	static TIP_UNBALANCED_AMOUNT: RefCell<u64> = RefCell::new(0);
+	static FEE_UNBALANCED_AMOUNT: RefCell<u64> = RefCell::new(0);
+}
+
+pub struct DealWithFees;
+impl OnUnbalanced<pallet_balances::NegativeImbalance<Test>> for DealWithFees {
+	fn on_unbalanceds<B>(
+		mut fees_then_tips: impl Iterator<Item = pallet_balances::NegativeImbalance<Test>>,
+	) {
+		if let Some(fees) = fees_then_tips.next() {
+			FEE_UNBALANCED_AMOUNT.with(|a| *a.borrow_mut() += fees.peek());
+			if let Some(tips) = fees_then_tips.next() {
+				TIP_UNBALANCED_AMOUNT.with(|a| *a.borrow_mut() += tips.peek());
+			}
+		}
+	}
+}
+
+impl WeightToFeePolynomial for WeightToFee {
+	type Balance = u64;
+
+	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+		smallvec![WeightToFeeCoefficient {
+			degree: 1,
+			coeff_frac: Perbill::zero(),
+			coeff_integer: WEIGHT_TO_FEE.with(|v| *v.borrow()),
+			negative: false,
+		}]
+	}
 }
 
 impl pallet_supersig::Config for Test {
@@ -126,6 +167,9 @@ impl pallet_supersig::Config for Test {
 	type MaxAccountsPerTransaction = MaxAccountsPerTransaction;
 	type PalletId = SupersigPalletId;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
+	type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
+	type WeightToFee = WeightToFee;
+	type TransactionByteFee = TransactionByteFee;
 }
 
 pub type NoCall = nothing::Call<Test>;
@@ -173,15 +217,17 @@ pub struct ExtBuilder {
 	caps_endowed_accounts: Vec<(AccountId, u64)>,
 }
 
+const BASE_ENDOWED_AMOUNT: u64 = 100_000_000_000;
+
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		ExtBuilder {
 			caps_endowed_accounts: vec![
-				(ALICE(), 1_000_000),
-				(BOB(), 100_000),
-				(CHARLIE(), 101_000),
-				(PAUL(), 100_000),
-				(DONALD(), 100_000),
+				(ALICE(), BASE_ENDOWED_AMOUNT),
+				(BOB(), BASE_ENDOWED_AMOUNT),
+				(CHARLIE(), BASE_ENDOWED_AMOUNT),
+				(PAUL(), BASE_ENDOWED_AMOUNT),
+				(DONALD(), BASE_ENDOWED_AMOUNT),
 			],
 		}
 	}
