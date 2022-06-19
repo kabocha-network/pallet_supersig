@@ -1,6 +1,7 @@
 use super::{helper::*, mock::*};
 use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
+use pallet_balances::WeightInfo;
 pub use sp_std::boxed::Box;
 
 ////////////
@@ -49,6 +50,52 @@ fn approve_call() {
 }
 
 #[test]
+fn execute_call_cannot_pay_fee() {
+	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			Origin::signed(ALICE()),
+			vec! {
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
+			}
+			.try_into()
+			.unwrap(),
+		));
+		let supersig_account = get_supersig_account(0);
+		let call = Call::Nothing(NoCall::do_nothing {
+			nothing: "test".into(),
+		});
+		assert_ok!(Supersig::submit_call(
+			Origin::signed(ALICE()),
+			supersig_account.clone(),
+			Box::new(call)
+		));
+
+		assert_ok!(Supersig::approve_call(
+			Origin::signed(ALICE()),
+			supersig_account.clone(),
+			0
+		));
+
+		assert_ok!(Supersig::approve_call(
+			Origin::signed(BOB()),
+			supersig_account.clone(),
+			0
+		));
+
+		assert_eq!(
+			last_event(),
+			Event::Supersig(crate::Event::CallExecutionAttempted(
+				supersig_account,
+				0,
+				Err(Error::<Test>::FeePayment.into())
+			))
+		);
+	})
+}
+
+#[test]
 fn approve_call_until_threshold() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
@@ -65,18 +112,19 @@ fn approve_call_until_threshold() {
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
-			100_000
+			1_000_000_000
 		));
 
 		let bob_balance = Balances::free_balance(BOB());
+		let amount_transferd: u64 = 100_000;
 
 		let call = Call::Balances(pallet_balances::Call::transfer {
 			dest: BOB(),
-			value: 100_000,
+			value: amount_transferd.into(),
 		});
 
 		assert_ok!(Supersig::submit_call(
-			Origin::signed(ALICE()),
+			Origin::signed(BOB()),
 			supersig_account.clone(),
 			Box::new(call)
 		));
@@ -87,11 +135,19 @@ fn approve_call_until_threshold() {
 			0
 		));
 
+		let supersig_balance = Balances::free_balance(&supersig_account);
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
 			0
 		));
+
+		assert_eq!(
+			Balances::free_balance(&supersig_account),
+			supersig_balance
+				- amount_transferd
+				- <Test as pallet_balances::Config>::WeightInfo::transfer()
+		);
 
 		// the call have been approved, so it is executed, and then the call is deleted from
 		// storage
@@ -104,7 +160,6 @@ fn approve_call_until_threshold() {
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Balances::reserved_balance(ALICE()), 0);
 
-		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
 		assert_eq!(
 			last_event(),
 			Event::Supersig(crate::Event::CallExecutionAttempted(
@@ -113,6 +168,7 @@ fn approve_call_until_threshold() {
 				Ok(Ok(()))
 			))
 		);
+		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
 	})
 }
 
@@ -134,7 +190,7 @@ fn approve_call_as_master() {
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
-			100_000
+			1_000_000_000
 		));
 
 		let bob_balance = Balances::free_balance(BOB());
@@ -172,7 +228,6 @@ fn approve_call_as_master() {
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Balances::reserved_balance(ALICE()), 0);
 
-		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
 		assert_eq!(
 			last_event(),
 			Event::Supersig(crate::Event::CallExecutionAttempted(
@@ -181,6 +236,7 @@ fn approve_call_as_master() {
 				Ok(Ok(()))
 			))
 		);
+		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
 	});
 }
 
