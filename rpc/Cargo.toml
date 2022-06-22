@@ -1,0 +1,3 @@
+[package]
+name = 'rpc'
+version = "1.0.0"
