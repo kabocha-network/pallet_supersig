@@ -19,9 +19,10 @@ fn create_supersig() {
 		));
 
 		assert_eq!(Balances::free_balance(get_supersig_account(0)), 0u64);
-		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
-			.saturating_mul((3u32).into())
-			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
+		let deposit =
+			Balance::from(size_of::<<TestRuntime as frame_system::Config>::AccountId>() as u32)
+				.saturating_mul((3u32).into())
+				.saturating_mul(<TestRuntime as SuperConfig>::DepositPerByte::get());
 
 		assert_eq!(Balances::reserved_balance(get_supersig_account(0)), deposit);
 		assert_eq!(Supersig::nonce_supersig(), 1);
@@ -30,10 +31,10 @@ fn create_supersig() {
 		assert_eq!(Supersig::members(0, CHARLIE()), Role::Standard);
 		assert_eq!(Supersig::total_members(0), 3);
 		assert_eq!(
-			frame_system::Pallet::<Test>::providers(&get_supersig_account(0)),
+			frame_system::Pallet::<TestRuntime>::providers(&get_supersig_account(0)),
 			1
 		);
-		let mut events = frame_system::Pallet::<Test>::events();
+		let mut events = frame_system::Pallet::<TestRuntime>::events();
 		assert_eq!(
 			events.pop().expect("expect event").event,
 			Event::Supersig(crate::Event::MembersAdded(
@@ -64,9 +65,10 @@ fn create_supersig_with_master() {
 		));
 
 		assert_eq!(Balances::free_balance(get_supersig_account(0)), 0u64);
-		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
-			.saturating_mul((3u32).into())
-			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
+		let deposit =
+			Balance::from(size_of::<<TestRuntime as frame_system::Config>::AccountId>() as u32)
+				.saturating_mul((3u32).into())
+				.saturating_mul(<TestRuntime as SuperConfig>::DepositPerByte::get());
 
 		assert_eq!(Balances::reserved_balance(get_supersig_account(0)), deposit);
 		assert_eq!(Supersig::nonce_supersig(), 1);
@@ -75,10 +77,10 @@ fn create_supersig_with_master() {
 		assert_eq!(Supersig::members(0, CHARLIE()), Role::Master);
 		assert_eq!(Supersig::total_members(0), 3);
 		assert_eq!(
-			frame_system::Pallet::<Test>::providers(&get_supersig_account(0)),
+			frame_system::Pallet::<TestRuntime>::providers(&get_supersig_account(0)),
 			1
 		);
-		let mut events = frame_system::Pallet::<Test>::events();
+		let mut events = frame_system::Pallet::<TestRuntime>::events();
 		assert_eq!(
 			events.pop().expect("expect event").event,
 			Event::Supersig(crate::Event::MembersAdded(
@@ -133,7 +135,7 @@ fn create_with_empty_list() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_noop!(
 			Supersig::create_supersig(Origin::signed(ALICE()), vec!().try_into().unwrap()),
-			Error::<Test>::InvalidNumberOfMembers
+			Error::<TestRuntime>::InvalidNumberOfMembers
 		);
 	});
 }

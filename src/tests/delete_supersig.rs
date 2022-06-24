@@ -34,17 +34,19 @@ fn delete_supersig() {
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Supersig::votes(0, 0), 0);
 		assert_eq!(
-			frame_system::Pallet::<Test>::providers(&supersig_account),
+			frame_system::Pallet::<TestRuntime>::providers(&supersig_account),
 			0
 		);
 
-		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
-			.saturating_mul((3u32).into())
-			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
+		let reserve =
+			Balance::from(size_of::<<TestRuntime as frame_system::Config>::AccountId>() as u32)
+				.saturating_mul((3u32).into())
+				.saturating_mul(<TestRuntime as SuperConfig>::DepositPerByte::get());
 		assert_eq!(
 			Balances::free_balance(BOB()),
 			bob_balance + amount + reserve
 		);
+		assert!(!System::account_exists(&supersig_account));
 		assert_eq!(
 			last_event(),
 			Event::Supersig(crate::Event::SupersigRemoved(supersig_account))
@@ -91,13 +93,14 @@ fn delete_supersig_with_call() {
 		assert!(Supersig::calls(0, 0).is_none());
 		assert_eq!(Supersig::votes(0, 0), 0);
 		assert_eq!(
-			frame_system::Pallet::<Test>::providers(&supersig_account),
+			frame_system::Pallet::<TestRuntime>::providers(&supersig_account),
 			0
 		);
 
-		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
-			.saturating_mul((3u32).into())
-			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
+		let reserve =
+			Balance::from(size_of::<<TestRuntime as frame_system::Config>::AccountId>() as u32)
+				.saturating_mul((3u32).into())
+				.saturating_mul(<TestRuntime as SuperConfig>::DepositPerByte::get());
 		assert_eq!(
 			Balances::free_balance(BOB()),
 			bob_balance + amount + reserve
@@ -126,7 +129,7 @@ fn delete_supersig_unknown_supersig() {
 		let bad_supersig_account = get_supersig_account(1);
 		assert_noop!(
 			Supersig::delete_supersig(Origin::signed(bad_supersig_account), BOB()),
-			Error::<Test>::NotSupersig
+			Error::<TestRuntime>::NotSupersig
 		);
 	})
 }
@@ -154,7 +157,7 @@ fn cannot_delete_supersig() {
 		assert_ok!(Balances::reserve(&supersig_account, amount));
 		assert_noop!(
 			Supersig::delete_supersig(Origin::signed(supersig_account), BOB()),
-			Error::<Test>::SupersigHaveLockedFunds
+			Error::<TestRuntime>::SupersigHaveLockedFunds
 		);
 	})
 }
@@ -173,6 +176,12 @@ fn cannot_liquidate_supersig() {
 			.unwrap()
 		));
 		let supersig_account = get_supersig_account(0);
+
+		assert_ok!(Balances::transfer(
+			Origin::signed(ALICE()),
+			supersig_account.clone(),
+			1_000_000_000
+		));
 
 		let call = Call::Balances(pallet_balances::Call::transfer_all {
 			dest: ALICE(),
@@ -196,6 +205,15 @@ fn cannot_liquidate_supersig() {
 			supersig_account.clone(),
 			0
 		));
+
+		assert_eq!(
+			last_event(),
+			Event::Supersig(crate::Event::CallExecutionAttempted(
+				supersig_account.clone(),
+				0,
+				Ok(Ok(()))
+			))
+		);
 
 		assert!(Supersig::calls(0, 0).is_none());
 

@@ -28,9 +28,10 @@ fn remove_members() {
 		assert_eq!(Supersig::members(0, PAUL()), Role::Standard);
 		assert_eq!(Supersig::total_members(0), 2);
 
-		let reserve = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
-			.saturating_mul((Supersig::total_members(0) as u32).into())
-			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
+		let reserve =
+			Balance::from(size_of::<<TestRuntime as frame_system::Config>::AccountId>() as u32)
+				.saturating_mul((Supersig::total_members(0) as u32).into())
+				.saturating_mul(<TestRuntime as SuperConfig>::DepositPerByte::get());
 		assert_eq!(Balances::reserved_balance(get_supersig_account(0)), reserve);
 		assert_eq!(
 			last_event(),
@@ -61,7 +62,7 @@ fn remove_users_not_allowed() {
 				Origin::signed(ALICE()),
 				vec!(BOB(), CHARLIE()).try_into().unwrap()
 			),
-			Error::<Test>::NotSupersig
+			Error::<TestRuntime>::NotSupersig
 		);
 	})
 }
@@ -86,7 +87,7 @@ fn remove_users_unknown_supersig() {
 				Origin::signed(bad_supersig_account),
 				vec!(BOB(), CHARLIE()).try_into().unwrap()
 			),
-			Error::<Test>::NotSupersig
+			Error::<TestRuntime>::NotSupersig
 		);
 	})
 }
@@ -109,7 +110,7 @@ fn remove_users_leaving_0_users() {
 				Origin::signed(supersig_account),
 				vec!(ALICE(), BOB()).try_into().unwrap()
 			),
-			Error::<Test>::InvalidNumberOfMembers
+			Error::<TestRuntime>::InvalidNumberOfMembers
 		);
 	})
 }

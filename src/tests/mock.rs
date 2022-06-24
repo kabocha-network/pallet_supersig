@@ -1,6 +1,12 @@
 use crate as pallet_supersig;
-use frame_support::{parameter_types, traits::Everything, PalletId};
+use frame_support::{
+	parameter_types,
+	traits::{ConstU8, Everything},
+	weights::IdentityFee,
+	PalletId,
+};
 use frame_system as system;
+use pallet_transaction_payment::CurrencyAdapter;
 use sp_core::{sr25519, Pair, Public, H256};
 use sp_runtime::{
 	testing::Header,
@@ -8,8 +14,8 @@ use sp_runtime::{
 	MultiSignature,
 };
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-type Block = frame_system::mocking::MockBlock<Test>;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<TestRuntime>;
+type Block = frame_system::mocking::MockBlock<TestRuntime>;
 type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 #[frame_support::pallet]
@@ -43,20 +49,21 @@ pub mod nothing {
 }
 
 frame_support::construct_runtime!(
-	pub enum Test where
+	pub enum TestRuntime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Supersig: pallet_supersig::{Pallet, Call, Storage, Event<T>},
+		TransactionPayment: pallet_transaction_payment,
 		Nothing: nothing::{Pallet, Call, Storage, Event<T>},
 
 		Balances: pallet_balances,
 	}
 );
 
-impl nothing::Config for Test {
+impl nothing::Config for TestRuntime {
 	type Event = Event;
 }
 
@@ -65,7 +72,7 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 
-impl system::Config for Test {
+impl system::Config for TestRuntime {
 	type AccountData = pallet_balances::AccountData<u64>;
 	type AccountId = AccountId;
 	type BaseCallFilter = Everything;
@@ -100,7 +107,7 @@ parameter_types! {
 	pub const MaxReserves: u32 = 50;
 }
 
-impl pallet_balances::Config for Test {
+impl pallet_balances::Config for TestRuntime {
 	type AccountStore = System;
 	type Balance = Balance;
 	type DustRemoval = ();
@@ -113,22 +120,34 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
+	pub const TransactionByteFee: Balance = 1;
+}
+
+impl pallet_transaction_payment::Config for TestRuntime {
+	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
+	type TransactionByteFee = TransactionByteFee;
+	type OperationalFeeMultiplier = ConstU8<5>;
+	type WeightToFee = IdentityFee<Balance>;
+	type FeeMultiplierUpdate = ();
+}
+
+parameter_types! {
 	pub const SupersigPalletId: PalletId = PalletId(*b"id/susig");
 	pub const SupersigPreimageByteDeposit: Balance = 1000;
 	pub const MaxAccountsPerTransaction: u32 = 4;
 }
 
-impl pallet_supersig::Config for Test {
+impl pallet_supersig::Config for TestRuntime {
 	type Call = Call;
 	type Currency = Balances;
 	type DepositPerByte = SupersigPreimageByteDeposit;
 	type Event = Event;
 	type MaxAccountsPerTransaction = MaxAccountsPerTransaction;
 	type PalletId = SupersigPalletId;
-	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
+	type WeightInfo = pallet_supersig::weights::SubstrateWeight<TestRuntime>;
 }
 
-pub type NoCall = nothing::Call<Test>;
+pub type NoCall = nothing::Call<TestRuntime>;
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
 
@@ -164,24 +183,21 @@ pub fn CHARLIE() -> AccountId {
 pub fn PAUL() -> AccountId {
 	get_account_id_from_seed::<sr25519::Public>("Paul")
 }
-#[allow(non_snake_case)]
-pub fn DONALD() -> AccountId {
-	get_account_id_from_seed::<sr25519::Public>("Donald")
-}
 
 pub struct ExtBuilder {
 	caps_endowed_accounts: Vec<(AccountId, u64)>,
 }
 
+const BASE_ENDOWED_AMOUNT: u64 = 100_000_000_000;
+
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		ExtBuilder {
 			caps_endowed_accounts: vec![
-				(ALICE(), 1_000_000),
-				(BOB(), 100_000),
-				(CHARLIE(), 101_000),
-				(PAUL(), 100_000),
-				(DONALD(), 100_000),
+				(ALICE(), BASE_ENDOWED_AMOUNT),
+				(BOB(), BASE_ENDOWED_AMOUNT),
+				(CHARLIE(), BASE_ENDOWED_AMOUNT),
+				(PAUL(), BASE_ENDOWED_AMOUNT),
 			],
 		}
 	}
@@ -196,9 +212,9 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+		let mut t = frame_system::GenesisConfig::default().build_storage::<TestRuntime>().unwrap();
 
-		pallet_balances::GenesisConfig::<Test> {
+		pallet_balances::GenesisConfig::<TestRuntime> {
 			balances: self.caps_endowed_accounts,
 		}
 		.assimilate_storage(&mut t)

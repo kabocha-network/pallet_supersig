@@ -68,7 +68,7 @@ fn non_allowed_remove_call() {
 		));
 		assert_noop!(
 			Supersig::remove_call(Origin::signed(BOB()), supersig_account, 0),
-			Error::<Test>::NotAllowed
+			Error::<TestRuntime>::NotAllowed
 		);
 	})
 }
@@ -102,7 +102,7 @@ fn remove_unknown_call() {
 				supersig_account,
 				1
 			),
-			Error::<Test>::CallNotFound
+			Error::<TestRuntime>::CallNotFound
 		);
 	})
 }

@@ -57,21 +57,21 @@ pub use pallet::*;
 #[cfg(test)]
 mod tests;
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+// #[cfg(feature = "runtime-benchmarks")]
+// mod benchmarking;
 
 pub use frame_support::{
-	dispatch::DispatchResult,
+	dispatch::{DispatchInfo, DispatchResult, Dispatchable, PostDispatchInfo},
 	traits::{tokens::ExistenceRequirement, Currency, ReservableCurrency},
 	transactional,
-	weights::{GetDispatchInfo, PostDispatchInfo},
+	weights::GetDispatchInfo,
 	PalletId,
 };
 pub use sp_core::Hasher;
+use sp_runtime::FixedPointOperand;
 
 pub use sp_runtime::traits::{
-	AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Dispatchable, Hash,
-	Saturating,
+	AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Saturating,
 };
 pub use sp_std::{boxed::Box, cmp::max, mem::size_of, prelude::Vec};
 
@@ -88,7 +88,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
 		/// the obiquitous event type
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The trait to manage funds
@@ -98,9 +98,10 @@ pub mod pallet {
 		type PalletId: Get<PalletId>;
 		/// The call type
 		type Call: Parameter
-			+ Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+			+ Dispatchable<Origin = Self::Origin>
 			+ GetDispatchInfo
-			+ From<frame_system::Call<Self>>;
+			+ From<frame_system::Call<Self>>
+			+ IsType<<Self as frame_system::Config>::Call>;
 
 		/// The amount of balance that must be deposited per bytes stored
 		#[pallet::constant]
@@ -217,10 +218,20 @@ pub mod pallet {
 		Overflow,
 		/// could not execute the call because it was incorrectly encoded
 		BadEncodedCall,
+		FeePayment,
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config> Pallet<T>
+	where
+		<T as frame_system::Config>::Call:
+			frame_support::dispatch::Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
+		<T as Config>::Call:
+			frame_support::dispatch::Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
+		<<T as pallet_transaction_payment::Config>::OnChargeTransaction as pallet_transaction_payment::OnChargeTransaction<
+			T,
+		>>::Balance: FixedPointOperand,
+	{
 		/// create a supersig.
 		///
 		/// `create_supersig` will create a supersig with specified parameters, and transfer
@@ -248,7 +259,7 @@ pub mod pallet {
 			// A supersig should at least have one member
 			let member_length = members.len();
 			if member_length < 1 {
-				return Err(Error::<T>::InvalidNumberOfMembers.into())
+				return Err(Error::<T>::InvalidNumberOfMembers.into());
 			}
 
 			// Get it id and associated account
@@ -348,10 +359,10 @@ pub mod pallet {
 			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
 			if Self::calls(supersig_id, call_id).is_none() {
-				return Err(Error::<T>::CallNotFound.into())
+				return Err(Error::<T>::CallNotFound.into());
 			}
 			if Self::members_votes((supersig_id, call_id, who.clone())) {
-				return Err(Error::<T>::AlreadyVoted.into())
+				return Err(Error::<T>::AlreadyVoted.into());
 			}
 
 			// Different roles have different voting weight
@@ -379,12 +390,49 @@ pub mod pallet {
 					// Try to decode and execute the call
 					let res = if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..])
 					{
-						Ok(call
-							.dispatch(
-								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
-							)
-							.map(|_| ())
-							.map_err(|e| e.error))
+						let call_len = preimage.data.len().try_into().unwrap();
+						use pallet_transaction_payment::OnChargeTransaction;
+						let dispatch_info = call.get_dispatch_info();
+						let fee = pallet_transaction_payment::Pallet::<T>::compute_fee(
+							call_len,
+							&dispatch_info,
+							Default::default(),
+						);
+						let liquidity_info = <<T as pallet_transaction_payment::Config>::OnChargeTransaction as OnChargeTransaction<T>>::withdraw_fee(
+							&supersig_account,
+							&call.clone().into(),
+							&dispatch_info,
+							fee, Default::default()).map_err(|_| Error::<T>::FeePayment)?;
+
+						let dispatch_result = call.dispatch(
+							frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
+						);
+
+						let post_dispatch_info = match dispatch_result {
+							Ok(post_dispatch_info) => post_dispatch_info,
+							Err(dispatch_error_with_post_info) => {
+								dispatch_error_with_post_info.post_info
+							},
+						};
+
+						let actual_fee =  pallet_transaction_payment::Pallet::<T>::compute_actual_fee(
+							call_len,
+							&dispatch_info,
+							&post_dispatch_info,
+							Default::default()
+						);
+
+						<<T as pallet_transaction_payment::Config>::OnChargeTransaction as OnChargeTransaction<T>>::correct_and_deposit_fee(
+							&supersig_account,
+							&dispatch_info,
+							&post_dispatch_info,
+							actual_fee,
+							Default::default(),
+							liquidity_info,
+						)
+						.map_err(|_| Error::<T>::FeePayment)?;
+
+						Ok(dispatch_result.map(|_| ()).map_err(|e| e.error))
 					} else {
 						Err(Error::<T>::BadEncodedCall.into())
 					};
@@ -423,7 +471,7 @@ pub mod pallet {
 
 			// Either the supersig or the user that created the vote can remove a call
 			if who != supersig_account && who != preimage.provider {
-				return Err(Error::<T>::NotAllowed.into())
+				return Err(Error::<T>::NotAllowed.into());
 			}
 
 			// Clean up storage and release reserved funds
@@ -565,7 +613,7 @@ pub mod pallet {
 			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
 			if Self::members(supersig_id, &who) == Role::NotMember {
-				return Err(Error::<T>::NotMember.into())
+				return Err(Error::<T>::NotMember.into());
 			}
 
 			// Remeber the storage state before we remove the members from it
@@ -582,7 +630,7 @@ pub mod pallet {
 			// A supersig should at least have one member
 			TotalMembers::<T>::try_mutate(supersig_id, |nb| {
 				if *nb == 1 {
-					return Err(Error::<T>::InvalidNumberOfMembers)
+					return Err(Error::<T>::InvalidNumberOfMembers);
 				};
 				*nb -= 1;
 				Ok(())
@@ -606,7 +654,7 @@ pub mod pallet {
 		) -> Result<SupersigId, pallet::Error<T>> {
 			if let Some((account, supersig_id)) = PalletId::try_from_sub_account(supersig_account) {
 				if account != T::PalletId::get() || Self::total_members(supersig_id) == 0 {
-					return Err(Error::<T>::NotSupersig)
+					return Err(Error::<T>::NotSupersig);
 				}
 				Ok(supersig_id)
 			} else {
@@ -675,7 +723,7 @@ pub mod pallet {
 				let new_total_members =
 					n.saturating_sub(removed.len().try_into().map_err(|_| Error::<T>::Conversion)?);
 				if new_total_members < 1 {
-					return Err(Error::<T>::InvalidNumberOfMembers)
+					return Err(Error::<T>::InvalidNumberOfMembers);
 				}
 
 				*n = new_total_members;

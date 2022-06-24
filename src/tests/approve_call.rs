@@ -1,6 +1,7 @@
 use super::{helper::*, mock::*};
 use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
+use pallet_balances::WeightInfo;
 pub use sp_std::boxed::Box;
 
 ////////////
@@ -65,14 +66,15 @@ fn approve_call_until_threshold() {
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
-			100_000
+			1_000_000_000,
 		));
 
 		let bob_balance = Balances::free_balance(BOB());
 
+		let amount_transferd = 100_000;
 		let call = Call::Balances(pallet_balances::Call::transfer {
 			dest: BOB(),
-			value: 100_000,
+			value: amount_transferd,
 		});
 
 		assert_ok!(Supersig::submit_call(
@@ -87,6 +89,7 @@ fn approve_call_until_threshold() {
 			0
 		));
 
+		let supersig_balance = Balances::free_balance(&supersig_account);
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
@@ -108,10 +111,17 @@ fn approve_call_until_threshold() {
 		assert_eq!(
 			last_event(),
 			Event::Supersig(crate::Event::CallExecutionAttempted(
-				supersig_account,
+				supersig_account.clone(),
 				0,
 				Ok(Ok(()))
 			))
+		);
+
+		assert_eq!(
+			Balances::free_balance(&supersig_account),
+			supersig_balance
+				- amount_transferd
+				- pallet_transaction_payment::<T>:: <TestRuntime as pallet_balances::Config>::WeightInfo::transfer()
 		);
 	})
 }
@@ -134,7 +144,7 @@ fn approve_call_as_master() {
 		assert_ok!(Balances::transfer(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
-			100_000
+			1_000_000_000
 		));
 
 		let bob_balance = Balances::free_balance(BOB());
@@ -209,7 +219,7 @@ fn approve_supersig_doesnt_exist() {
 		));
 		assert_noop!(
 			Supersig::approve_call(Origin::signed(CHARLIE()), get_supersig_account(3), 0),
-			Error::<Test>::NotSupersig
+			Error::<TestRuntime>::NotSupersig
 		);
 	})
 }
@@ -244,7 +254,7 @@ fn user_already_voted() {
 		));
 		assert_noop!(
 			Supersig::approve_call(Origin::signed(CHARLIE()), supersig_account, 0),
-			Error::<Test>::AlreadyVoted
+			Error::<TestRuntime>::AlreadyVoted
 		);
 	})
 }
@@ -273,7 +283,7 @@ fn approve_not_a_member() {
 		));
 		assert_noop!(
 			Supersig::approve_call(Origin::signed(CHARLIE()), supersig_account, 0),
-			Error::<Test>::NotMember
+			Error::<TestRuntime>::NotMember
 		);
 	})
 }

@@ -25,9 +25,10 @@ fn add_members() {
 		assert_eq!(Supersig::members(0, CHARLIE()), Role::Standard);
 		assert_eq!(Supersig::total_members(0), 3);
 
-		let deposit = Balance::from(size_of::<<Test as frame_system::Config>::AccountId>() as u32)
-			.saturating_mul((Supersig::total_members(0) as u32).into())
-			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
+		let deposit =
+			Balance::from(size_of::<<TestRuntime as frame_system::Config>::AccountId>() as u32)
+				.saturating_mul((Supersig::total_members(0) as u32).into())
+				.saturating_mul(<TestRuntime as SuperConfig>::DepositPerByte::get());
 		assert_eq!(Balances::reserved_balance(get_supersig_account(0)), deposit);
 		assert_eq!(
 			last_event(),
@@ -50,7 +51,7 @@ fn add_users_not_allowed() {
 		));
 		assert_noop!(
 			Supersig::add_members(Origin::signed(ALICE()), members),
-			Error::<Test>::NotSupersig
+			Error::<TestRuntime>::NotSupersig
 		);
 	})
 }
@@ -67,7 +68,7 @@ fn add_users_unknown_supersig() {
 		let bad_supersig_account = get_supersig_account(1);
 		assert_noop!(
 			Supersig::add_members(Origin::signed(bad_supersig_account), members),
-			Error::<Test>::NotSupersig
+			Error::<TestRuntime>::NotSupersig
 		);
 	})
 }

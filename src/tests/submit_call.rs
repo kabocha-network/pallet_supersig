@@ -35,7 +35,7 @@ fn submit_calls() {
 			Box::new(call.clone())
 		));
 		let deposit = Balance::from(call.encode().len() as u32)
-			.saturating_mul(<Test as SuperConfig>::DepositPerByte::get());
+			.saturating_mul(<TestRuntime as SuperConfig>::DepositPerByte::get());
 		assert_eq!(Balances::reserved_balance(ALICE()), deposit);
 		assert_eq!(Supersig::nonce_call(0), 1);
 		assert_eq!(
@@ -96,7 +96,7 @@ fn submit_supersig_doesnt_exist() {
 				bad_supersig_account,
 				Box::new(call)
 			),
-			Error::<Test>::NotSupersig
+			Error::<TestRuntime>::NotSupersig
 		);
 	})
 }
