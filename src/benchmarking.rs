@@ -48,7 +48,7 @@ benchmarks! {
 		let val: BalanceOf<T> = 4_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
-		let supersig_id = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
+		let supersig_id = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		let members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
 
 		assert_ok!(
@@ -72,7 +72,7 @@ benchmarks! {
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 		T::Currency::make_free_balance_be(&bob, val.saturating_mul(4_000_000_000u32.into()));
 
-		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
+		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 
 		let members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob.clone(), Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
 
@@ -99,7 +99,7 @@ benchmarks! {
 		let val: BalanceOf<T> = 4_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
-		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
+		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 
 		let members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
 
@@ -132,7 +132,7 @@ benchmarks! {
 			let acc = benchmark_account(oui, i, 0);
 			members.try_push((acc, Role::Standard)).unwrap();
 		}
-		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
+		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		T::Currency::make_free_balance_be(&supersig_id, val.saturating_mul(4_000_000_000u32.into()));
 
 	}: _(RawOrigin::Signed(supersig_id.clone()), members.clone())
@@ -156,7 +156,7 @@ benchmarks! {
 			members_and_roles.try_push((acc.clone(), Role::Standard)).unwrap();
 			members.try_push(acc).unwrap();
 		}
-		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
+		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		T::Currency::make_free_balance_be(&supersig_id, val.saturating_mul(4_000_000_000u32.into()));
 
 		assert_ok!(Pallet::<T>::add_members(RawOrigin::Signed(supersig_id.clone()).into(), members_and_roles.clone()));
@@ -172,7 +172,7 @@ benchmarks! {
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
 		let val: BalanceOf<T> = 4_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
-		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
+		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		T::Currency::make_free_balance_be(&supersig_id, val.saturating_mul(4_000_000_000u32.into()));
 
 		let members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob.clone(), Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
@@ -199,7 +199,7 @@ benchmarks! {
 		let val: BalanceOf<T> = 1_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
-		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account(0);
+		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		let members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob.clone(), Role::Standard), (charlie.clone(), Role::Standard)}.try_into().unwrap();
 
 		assert_ok!(
