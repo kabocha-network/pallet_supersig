@@ -1,0 +1,23 @@
+[package]
+name = "pallet-supersig-rpc"
+version = "0.1.0"
+authors = ["Timothée Delabrouille <https://github.com/tdelabro>"]
+edition = "2021"
+license = "Apache-2.0"
+
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", features = [
+	"derive",
+], default-features = false }
+scale-info = { version = "2.1.1", default-features = false, features = [
+	"derive",
+] }
+
+jsonrpsee = { version = "0.14.0", features = ["server", "macros"] }
+
+sp-api = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+
+pallet-supersig-rpc-runtime-api = { path = "./runtime-api" }

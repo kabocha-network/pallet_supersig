@@ -125,29 +125,29 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	pub type Members<T: Config> =
-		StorageDoubleMap<_, Blake2_256, SupersigId, Blake2_256, T::AccountId, Role, ValueQuery>;
+		StorageDoubleMap<_, Twox64Concat, SupersigId, Twox64Concat, T::AccountId, Role, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn total_members)]
-	pub type TotalMembers<T: Config> = StorageMap<_, Blake2_256, SupersigId, u32, ValueQuery>;
+	pub type TotalMembers<T: Config> = StorageMap<_, Twox64Concat, SupersigId, u32, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn total_deposit)]
 	pub type TotalDeposit<T: Config> =
-		StorageMap<_, Blake2_256, SupersigId, BalanceOf<T>, ValueQuery>;
+		StorageMap<_, Twox64Concat, SupersigId, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn nonce_call)]
-	pub type NonceCall<T: Config> = StorageMap<_, Blake2_256, SupersigId, CallId, ValueQuery>;
+	pub type NonceCall<T: Config> = StorageMap<_, Twox64Concat, SupersigId, CallId, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn calls)]
 	pub type Calls<T: Config> = StorageDoubleMap<
 		_,
-		Blake2_256,
+		Twox64Concat,
 		SupersigId,
-		Blake2_256,
+		Twox64Concat,
 		CallId,
 		PreimageCall<T::AccountId, BalanceOf<T>>,
 		OptionQuery,
@@ -156,16 +156,16 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn votes)]
 	pub type Votes<T: Config> =
-		StorageDoubleMap<_, Blake2_256, SupersigId, Blake2_256, CallId, u32, ValueQuery>;
+		StorageDoubleMap<_, Twox64Concat, SupersigId, Twox64Concat, CallId, u32, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn members_votes)]
 	pub type MembersVotes<T: Config> = StorageNMap<
 		_,
 		(
-			NMapKey<Blake2_256, SupersigId>,
-			NMapKey<Blake2_256, CallId>,
-			NMapKey<Blake2_256, T::AccountId>,
+			NMapKey<Twox64Concat, SupersigId>,
+			NMapKey<Twox64Concat, CallId>,
+			NMapKey<Twox64Concat, T::AccountId>,
 		),
 		bool,
 		ValueQuery,
@@ -748,5 +748,22 @@ pub mod pallet {
 				.ok_or(Error::<T>::Overflow)?;
 			Ok(amount_to_unreserve)
 		}
+	}
+}
+
+// RPC calls
+
+#[allow(dead_code)]
+impl<T: Config> Pallet<T> {
+	fn get_account_supersigs(who: T::AccountId) -> Vec<SupersigId> {
+		Members::<T>::iter()
+			.filter_map(|(supersig_id, member_id, _)| {
+				if member_id == who {
+					Some(supersig_id)
+				} else {
+					None
+				}
+			})
+			.collect()
 	}
 }
