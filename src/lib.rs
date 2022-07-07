@@ -766,4 +766,8 @@ impl<T: Config> Pallet<T> {
 			})
 			.collect()
 	}
+
+	fn get_members_connected_to_supersig(which: SupersigId) -> Vec<(T::AccountId, Role)> {
+		Members::<T>::iter_prefix(which).collect()
+	}
 }
