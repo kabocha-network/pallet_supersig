@@ -125,29 +125,29 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	pub type Members<T: Config> =
-		StorageDoubleMap<_, Blake2_256, SupersigId, Blake2_256, T::AccountId, Role, ValueQuery>;
+		StorageDoubleMap<_, Twox64Concat, SupersigId, Twox64Concat, T::AccountId, Role, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn total_members)]
-	pub type TotalMembers<T: Config> = StorageMap<_, Blake2_256, SupersigId, u32, ValueQuery>;
+	pub type TotalMembers<T: Config> = StorageMap<_, Twox64Concat, SupersigId, u32, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn total_deposit)]
 	pub type TotalDeposit<T: Config> =
-		StorageMap<_, Blake2_256, SupersigId, BalanceOf<T>, ValueQuery>;
+		StorageMap<_, Twox64Concat, SupersigId, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn nonce_call)]
-	pub type NonceCall<T: Config> = StorageMap<_, Blake2_256, SupersigId, CallId, ValueQuery>;
+	pub type NonceCall<T: Config> = StorageMap<_, Twox64Concat, SupersigId, CallId, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn calls)]
 	pub type Calls<T: Config> = StorageDoubleMap<
 		_,
-		Blake2_256,
+		Twox64Concat,
 		SupersigId,
-		Blake2_256,
+		Twox64Concat,
 		CallId,
 		PreimageCall<T::AccountId, BalanceOf<T>>,
 		OptionQuery,
@@ -156,16 +156,16 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn votes)]
 	pub type Votes<T: Config> =
-		StorageDoubleMap<_, Blake2_256, SupersigId, Blake2_256, CallId, u32, ValueQuery>;
+		StorageDoubleMap<_, Twox64Concat, SupersigId, Twox64Concat, CallId, u32, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn members_votes)]
 	pub type MembersVotes<T: Config> = StorageNMap<
 		_,
 		(
-			NMapKey<Blake2_256, SupersigId>,
-			NMapKey<Blake2_256, CallId>,
-			NMapKey<Blake2_256, T::AccountId>,
+			NMapKey<Twox64Concat, SupersigId>,
+			NMapKey<Twox64Concat, CallId>,
+			NMapKey<Twox64Concat, T::AccountId>,
 		),
 		bool,
 		ValueQuery,
@@ -250,7 +250,7 @@ pub mod pallet {
 			// A supersig should at least have one member
 			let member_length = members.len();
 			if member_length < 1 {
-				return Err(Error::<T>::InvalidNumberOfMembers.into())
+				return Err(Error::<T>::InvalidNumberOfMembers.into());
 			}
 
 			// Get it id and associated account
@@ -352,10 +352,10 @@ pub mod pallet {
 			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
 			if Self::calls(supersig_id, call_id).is_none() {
-				return Err(Error::<T>::CallNotFound.into())
+				return Err(Error::<T>::CallNotFound.into());
 			}
 			if Self::members_votes((supersig_id, call_id, who.clone())) {
-				return Err(Error::<T>::AlreadyVoted.into())
+				return Err(Error::<T>::AlreadyVoted.into());
 			}
 
 			// Different roles have different voting weight
@@ -427,7 +427,7 @@ pub mod pallet {
 
 			// Either the supersig or the user that created the vote can remove a call
 			if who != supersig_account && who != preimage.provider {
-				return Err(Error::<T>::NotAllowed.into())
+				return Err(Error::<T>::NotAllowed.into());
 			}
 
 			// Clean up storage and release reserved funds
@@ -569,7 +569,7 @@ pub mod pallet {
 			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
 			if Self::members(supersig_id, &who) == Role::NotMember {
-				return Err(Error::<T>::NotMember.into())
+				return Err(Error::<T>::NotMember.into());
 			}
 
 			// Remeber the storage state before we remove the members from it
@@ -586,7 +586,7 @@ pub mod pallet {
 			// A supersig should at least have one member
 			TotalMembers::<T>::try_mutate(supersig_id, |nb| {
 				if *nb == 1 {
-					return Err(Error::<T>::InvalidNumberOfMembers)
+					return Err(Error::<T>::InvalidNumberOfMembers);
 				};
 				*nb -= 1;
 				Ok(())
@@ -610,7 +610,7 @@ pub mod pallet {
 		) -> Result<SupersigId, pallet::Error<T>> {
 			if let Some((account, supersig_id)) = PalletId::try_from_sub_account(supersig_account) {
 				if account != T::PalletId::get() || Self::total_members(supersig_id) == 0 {
-					return Err(Error::<T>::NotSupersig)
+					return Err(Error::<T>::NotSupersig);
 				}
 				Ok(supersig_id)
 			} else {
@@ -679,7 +679,7 @@ pub mod pallet {
 				let new_total_members =
 					n.saturating_sub(removed.len().try_into().map_err(|_| Error::<T>::Conversion)?);
 				if new_total_members < 1 {
-					return Err(Error::<T>::InvalidNumberOfMembers)
+					return Err(Error::<T>::InvalidNumberOfMembers);
 				}
 
 				*n = new_total_members;
@@ -748,5 +748,26 @@ pub mod pallet {
 				.ok_or(Error::<T>::Overflow)?;
 			Ok(amount_to_unreserve)
 		}
+	}
+}
+
+// RPC calls
+
+#[allow(dead_code)]
+impl<T: Config> Pallet<T> {
+	pub fn get_account_supersigs(who: T::AccountId) -> Vec<SupersigId> {
+		Members::<T>::iter()
+			.filter_map(|(supersig_id, member_id, _)| {
+				if member_id == who {
+					Some(supersig_id)
+				} else {
+					None
+				}
+			})
+			.collect()
+	}
+
+	pub fn get_members_connected_to_supersig(which: SupersigId) -> Vec<(T::AccountId, Role)> {
+		Members::<T>::iter_prefix(which).collect()
 	}
 }
