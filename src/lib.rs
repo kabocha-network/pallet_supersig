@@ -755,7 +755,7 @@ pub mod pallet {
 
 #[allow(dead_code)]
 impl<T: Config> Pallet<T> {
-	fn get_account_supersigs(who: T::AccountId) -> Vec<SupersigId> {
+	pub fn get_account_supersigs(who: T::AccountId) -> Vec<SupersigId> {
 		Members::<T>::iter()
 			.filter_map(|(supersig_id, member_id, _)| {
 				if member_id == who {
@@ -767,7 +767,41 @@ impl<T: Config> Pallet<T> {
 			.collect()
 	}
 
-	fn get_members_connected_to_supersig(which: SupersigId) -> Vec<(T::AccountId, Role)> {
+	pub fn get_members_connected(which: SupersigId) -> Vec<(T::AccountId, Role)> {
 		Members::<T>::iter_prefix(which).collect()
+	}
+
+	pub fn get_proposals(which: SupersigId) -> (Vec<((Vec<u8>, T::AccountId, BalanceOf<T>), Vec<T::AccountId>)>, u32) {
+		let member_count = Self::total_members(which);
+		let proposal_state = Calls::<T>::iter_prefix(which)
+			.map(|(call_id, call)| (
+				(call.data, call.provider, call.deposit),
+				MembersVotes::<T>::iter_prefix((which, call_id))
+					.filter_map(|(account_id, vote)| {
+						if vote {
+							Some(account_id)
+						} else {
+							None
+						}
+					})
+					.collect()
+			)).collect();
+		(proposal_state, member_count)
+	}
+
+	pub fn get_proposal_state(which: SupersigId, call_id: CallId) -> (bool, Vec<T::AccountId>, u32, u32) {
+		let member_count = Self::total_members(which);
+		let votes = Self::votes(which, call_id);
+		let exists = !Self::calls(which, call_id).is_none();
+		let member_votes = MembersVotes::<T>::iter_prefix((which, call_id))
+			.filter_map(|(account_id, vote)| {
+				if vote {
+					Some(account_id)
+				} else {
+					None
+				}
+			})
+			.collect();
+		(exists, member_votes, member_count, votes)
 	}
 }
