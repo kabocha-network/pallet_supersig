@@ -82,7 +82,7 @@ fn get_members_connected() {
 			vec!((ALICE(), Role::Standard), (CHARLIE(), Role::Standard)).try_into().unwrap()
 		));
         assert_eq!(
-			Supersig::get_members_connected(2),
+			Supersig::get_members_connected(supersig_count),
 			vec![(ALICE(), Role::Standard), (BOB(), Role::Standard), (CHARLIE(), Role::Standard)]
 		);
 	})
@@ -146,8 +146,10 @@ fn get_proposals() {
 			supersig_account.clone(),
 			call_id
 		));
+		// Here the expected behaviour is :
+		// Proposal has been deleted because 2 of 3 voted.
 		assert_eq!(
-			Supersig::get_proposals(0),
+			Supersig::get_proposals(supersig_id),
 			(vec![first_proposal.clone()], 3)
 		);
 	})
@@ -202,11 +204,14 @@ fn get_proposal_state() {
 			Supersig::get_proposal_state(supersig_id, call_id),
 			(true, vec![BOB()], 3, 1)
 		);
+
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
 			call_id
 		));
+		// Here the expected behaviour is :
+		// Proposal has been deleted because 2 of 3 voted.
 		assert_eq!(
 			Supersig::get_proposal_state(supersig_id, call_id),
 			(false, vec![], 3, 0)

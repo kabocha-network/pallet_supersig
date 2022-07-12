@@ -771,6 +771,12 @@ impl<T: Config> Pallet<T> {
 		Members::<T>::iter_prefix(which).collect()
 	}
 
+	// Return :
+	// Tuple :
+	// Vec<((Vec<u8>, T::AccountId, BalanceOf<T>), Vec<T::AccountId>)> :
+	// The tuple inside the vec is just a Call that is unwrap.
+	// The vec inside the vec is all the account id that have voted.
+	// The second parameter of the tuple is the total amount of members into the supersig.
 	pub fn get_proposals(which: SupersigId) -> (Vec<((Vec<u8>, T::AccountId, BalanceOf<T>), Vec<T::AccountId>)>, u32) {
 		let member_count = Self::total_members(which);
 		let proposal_state = Calls::<T>::iter_prefix(which)
@@ -789,6 +795,12 @@ impl<T: Config> Pallet<T> {
 		(proposal_state, member_count)
 	}
 
+	// Return :
+	// Tuple :
+	// The bool is to define if the Call that is asked for state still exists.
+	// The vec is all the account id that have voted.
+	// The first u32 is the total amount of members in the supersig
+	// The second u32 is the total number of votes (not necessary because == members_votes.len())
 	pub fn get_proposal_state(which: SupersigId, call_id: CallId) -> (bool, Vec<T::AccountId>, u32, u32) {
 		let member_count = Self::total_members(which);
 		let votes = Self::votes(which, call_id);
