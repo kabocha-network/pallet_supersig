@@ -250,7 +250,7 @@ pub mod pallet {
 			// A supersig should at least have one member
 			let member_length = members.len();
 			if member_length < 1 {
-				return Err(Error::<T>::InvalidNumberOfMembers.into());
+				return Err(Error::<T>::InvalidNumberOfMembers.into())
 			}
 
 			// Get it id and associated account
