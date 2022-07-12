@@ -777,21 +777,31 @@ impl<T: Config> Pallet<T> {
 	// The tuple inside the vec is just a Call that is unwrap.
 	// The vec inside the vec is all the account id that have voted.
 	// The second parameter of the tuple is the total amount of members into the supersig.
-	pub fn get_proposals(which: SupersigId) -> (Vec<((Vec<u8>, T::AccountId, BalanceOf<T>), Vec<T::AccountId>)>, u32) {
+	pub fn get_proposals(
+		which: SupersigId,
+	) -> (
+		Vec<((Vec<u8>, T::AccountId, BalanceOf<T>), Vec<T::AccountId>)>,
+		u32,
+	) {
 		let member_count = Self::total_members(which);
 		let proposal_state = Calls::<T>::iter_prefix(which)
-			.map(|(call_id, call)| (
-				(call.data, call.provider, call.deposit),
-				MembersVotes::<T>::iter_prefix((which, call_id))
-					.filter_map(|(account_id, vote)| {
-						if vote {
-							Some(account_id)
-						} else {
-							None
-						}
-					})
-					.collect()
-			)).collect();
+			.map(|(call_id, call)| {
+				(
+					(call.data, call.provider, call.deposit),
+					MembersVotes::<T>::iter_prefix((which, call_id))
+						.filter_map(
+							|(account_id, vote)| {
+								if vote {
+									Some(account_id)
+								} else {
+									None
+								}
+							},
+						)
+						.collect(),
+				)
+			})
+			.collect();
 		(proposal_state, member_count)
 	}
 
@@ -801,18 +811,23 @@ impl<T: Config> Pallet<T> {
 	// The vec is all the account id that have voted.
 	// The first u32 is the total amount of members in the supersig
 	// The second u32 is the total number of votes (not necessary because == members_votes.len())
-	pub fn get_proposal_state(which: SupersigId, call_id: CallId) -> (bool, Vec<T::AccountId>, u32, u32) {
+	pub fn get_proposal_state(
+		which: SupersigId,
+		call_id: CallId,
+	) -> (bool, Vec<T::AccountId>, u32, u32) {
 		let member_count = Self::total_members(which);
 		let votes = Self::votes(which, call_id);
 		let exists = !Self::calls(which, call_id).is_none();
 		let member_votes = MembersVotes::<T>::iter_prefix((which, call_id))
-			.filter_map(|(account_id, vote)| {
-				if vote {
-					Some(account_id)
-				} else {
-					None
-				}
-			})
+			.filter_map(
+				|(account_id, vote)| {
+					if vote {
+						Some(account_id)
+					} else {
+						None
+					}
+				},
+			)
 			.collect();
 		(exists, member_votes, member_count, votes)
 	}
