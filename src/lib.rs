@@ -75,6 +75,7 @@ pub use sp_runtime::traits::{
 };
 pub use sp_std::{boxed::Box, cmp::max, mem::size_of, prelude::Vec};
 
+pub mod rpc;
 pub mod types;
 pub mod weights;
 
@@ -605,7 +606,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		fn get_supersig_id_from_account(
+		pub fn get_supersig_id_from_account(
 			supersig_account: &T::AccountId,
 		) -> Result<SupersigId, pallet::Error<T>> {
 			if let Some((account, supersig_id)) = PalletId::try_from_sub_account(supersig_account) {
@@ -748,79 +749,5 @@ pub mod pallet {
 				.ok_or(Error::<T>::Overflow)?;
 			Ok(amount_to_unreserve)
 		}
-	}
-}
-
-// RPC calls
-
-#[allow(dead_code)]
-impl<T: Config> Pallet<T> {
-	pub fn get_account_supersigs(who: T::AccountId) -> Vec<SupersigId> {
-		Members::<T>::iter()
-			.filter_map(|(supersig_id, member_id, _)| {
-				if member_id == who {
-					Some(supersig_id)
-				} else {
-					None
-				}
-			})
-			.collect()
-	}
-
-	pub fn get_members_connected(which: SupersigId) -> Vec<(T::AccountId, Role)> {
-		Members::<T>::iter_prefix(which).collect()
-	}
-
-	// Return :
-	// Tuple :
-	// Vec<((Vec<u8>, T::AccountId, BalanceOf<T>), Vec<T::AccountId>)> :
-	// The tuple inside the vec is just a Call that is unwrap.
-	// The vec inside the vec is all the account id that have voted.
-	// The second parameter of the tuple is the total amount of members into the supersig.
-	pub fn get_proposals(
-		which: SupersigId,
-	) -> (
-		Vec<((Vec<u8>, T::AccountId, BalanceOf<T>), Vec<T::AccountId>)>,
-		u32,
-	) {
-		let member_count = Self::total_members(which);
-		let proposal_state = Calls::<T>::iter_prefix(which)
-			.map(|(call_id, call)| {
-				(
-					(call.data, call.provider, call.deposit),
-					MembersVotes::<T>::iter_prefix((which, call_id))
-						.filter_map(
-							|(account_id, vote)| {
-								if vote { Some(account_id) } else { None }
-							},
-						)
-						.collect(),
-				)
-			})
-			.collect();
-		(proposal_state, member_count)
-	}
-
-	// Return :
-	// Tuple :
-	// The bool is to define if the Call that is asked for state still exists.
-	// The vec is all the account id that have voted.
-	// The first u32 is the total amount of members in the supersig
-	// The second u32 is the total number of votes (not necessary because == members_votes.len())
-	pub fn get_proposal_state(
-		which: SupersigId,
-		call_id: CallId,
-	) -> (bool, Vec<T::AccountId>, u32, u32) {
-		let member_count = Self::total_members(which);
-		let votes = Self::votes(which, call_id);
-		let exists = !Self::calls(which, call_id).is_none();
-		let member_votes = MembersVotes::<T>::iter_prefix((which, call_id))
-			.filter_map(
-				|(account_id, vote)| {
-					if vote { Some(account_id) } else { None }
-				},
-			)
-			.collect();
-		(exists, member_votes, member_count, votes)
 	}
 }

@@ -1,5 +1,5 @@
 use super::{helper::*, mock::*};
-use crate::Role;
+use crate::{rpc::ProposalState, Role};
 use frame_support::assert_ok;
 pub use sp_std::{boxed::Box, mem::size_of};
 
@@ -28,149 +28,84 @@ fn get_account_supersigs() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		let mut supersig_count: u128 = 0;
 
-		assert_eq!(Supersig::get_account_supersigs(ALICE()), vec![]);
+		assert_eq!(Supersig::get_user_supersigs(ALICE()), vec![]);
 
 		create_supersig(supersig_count);
-		assert_eq!(Supersig::get_account_supersigs(ALICE()), vec![0]);
+		let alice_supersigs = Supersig::get_user_supersigs(ALICE());
+		assert!(alice_supersigs.contains(&0));
 		supersig_count += 1;
 
 		create_supersig(supersig_count);
-		assert_eq!(Supersig::get_account_supersigs(ALICE()), vec![1, 0]);
+		let alice_supersigs = Supersig::get_user_supersigs(ALICE());
+		assert!(alice_supersigs.contains(&0));
+		assert!(alice_supersigs.contains(&1));
 		supersig_count += 1;
 
 		create_supersig(supersig_count);
-		assert_eq!(Supersig::get_account_supersigs(ALICE()), vec![1, 0, 2]);
-		supersig_count += 1;
-
-		create_supersig(supersig_count);
-		assert_eq!(Supersig::get_account_supersigs(ALICE()), vec![1, 0, 3, 2]);
-		supersig_count += 1;
-
-		create_supersig(supersig_count);
-		assert_eq!(
-			Supersig::get_account_supersigs(ALICE()),
-			vec![1, 0, 3, 4, 2]
-		);
+		let alice_supersigs = Supersig::get_user_supersigs(ALICE());
+		assert!(alice_supersigs.contains(&0));
+		assert!(alice_supersigs.contains(&1));
+		assert!(alice_supersigs.contains(&2));
 	})
 }
 
 #[test]
-fn get_members_connected() {
+fn list_members() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		let mut supersig_count: u128 = 0;
-		let mut supersig_account: sp_runtime::AccountId32;
-
-		create_supersig(supersig_count);
-		assert_eq!(
-			Supersig::get_members_connected(supersig_count),
-			vec![
-				(ALICE(), Role::Master),
-				(BOB(), Role::Standard),
-				(CHARLIE(), Role::Standard)
-			]
-		);
-		supersig_count += 1;
-
-		supersig_account = create_supersig(supersig_count);
-		assert_ok!(Supersig::add_members(
-			Origin::signed(supersig_account),
-			vec!((BOB(), Role::Master), (CHARLIE(), Role::Standard)).try_into().unwrap()
-		));
-		assert_eq!(Supersig::total_members(supersig_count), 3);
-		assert_eq!(
-			Supersig::get_members_connected(supersig_count),
-			vec![
-				(ALICE(), Role::Master),
-				(BOB(), Role::Master),
-				(CHARLIE(), Role::Standard)
-			]
-		);
-		supersig_count += 1;
-
-		supersig_account = create_supersig(supersig_count);
-		assert_ok!(Supersig::add_members(
-			Origin::signed(supersig_account),
-			vec!((ALICE(), Role::Standard), (CHARLIE(), Role::Standard)).try_into().unwrap()
-		));
-		assert_eq!(
-			Supersig::get_members_connected(supersig_count),
-			vec![
-				(ALICE(), Role::Standard),
-				(BOB(), Role::Standard),
-				(CHARLIE(), Role::Standard)
-			]
-		);
+		create_supersig(0);
+		assert!(Supersig::list_members(0).contains(&(ALICE(), Role::Master)));
+		assert!(Supersig::list_members(0).contains(&(BOB(), Role::Standard)));
+		assert!(Supersig::list_members(0).contains(&(CHARLIE(), Role::Standard)));
 	})
 }
 
 #[test]
 fn get_proposals() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		let mut call_id = 0;
-		let supersig_id = 0;
+		let supersig_account = create_supersig(0);
 		let call = Call::Nothing(NoCall::do_nothing {
 			nothing: "test".into(),
 		});
-		let data = vec![2, 0, 16, 116, 101, 115, 116];
-		let supersig_account = create_supersig(supersig_id);
 
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
 			Box::new(call.clone())
 		));
-		assert_eq!(
-			Supersig::get_proposals(supersig_id),
-			(vec![((data.clone(), ALICE(), 7000), vec![])], 3)
-		);
-		assert_ok!(Supersig::approve_call(
-			Origin::signed(BOB()),
-			supersig_account.clone(),
-			call_id
-		));
-		let first_proposal = ((data.clone(), ALICE(), 7000), vec![BOB()]);
-		assert_eq!(
-			Supersig::get_proposals(supersig_id),
-			(vec![first_proposal.clone()], 3)
-		);
-		call_id += 1;
 
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
 			Box::new(call.clone())
 		));
-		assert_eq!(
-			Supersig::get_proposals(supersig_id),
-			(
-				vec![
-					((data.clone(), ALICE(), 7000), vec![]),
-					first_proposal.clone()
-				],
-				3
-			)
-		);
+
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(BOB()),
 			supersig_account.clone(),
-			call_id
+			0,
 		));
-		let second_proposal = ((data.clone(), ALICE(), 7000), vec![BOB()]);
 
-		assert_eq!(
-			Supersig::get_proposals(supersig_id),
-			(vec![second_proposal.clone(), first_proposal.clone()], 3)
-		);
+		assert_ok!(Supersig::approve_call(
+			Origin::signed(BOB()),
+			supersig_account.clone(),
+			1,
+		));
+
+		let list = Supersig::list_proposals(0);
+		assert_eq!(list.1, 3);
+		assert_eq!(list.0.len(), 2);
+		assert!(list.0.contains(&ProposalState::new(0, call.clone(), ALICE(), vec![BOB()])));
+		assert!(list.0.contains(&ProposalState::new(1, call.clone(), ALICE(), vec![BOB()])));
+
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
-			call_id
+			1,
 		));
-		// Here the expected behaviour is :
-		// Proposal has been deleted because 2 of 3 voted.
+
 		assert_eq!(
-			Supersig::get_proposals(supersig_id),
-			(vec![first_proposal.clone()], 3)
+			Supersig::list_proposals(0),
+			(vec![ProposalState::new(0, call, ALICE(), vec![BOB()])], 3)
 		);
 	})
 }
@@ -178,62 +113,44 @@ fn get_proposals() {
 #[test]
 fn get_proposal_state() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
-		let mut call_id = 0;
-		let supersig_id = 0;
+		let supersig_account = create_supersig(0);
 		let call = Call::Nothing(NoCall::do_nothing {
 			nothing: "test".into(),
 		});
-		let supersig_account = create_supersig(supersig_id);
+
+		assert_eq!(Supersig::get_proposal_state(0, 0), None);
 
 		assert_ok!(Supersig::submit_call(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
 			Box::new(call.clone())
 		));
-		assert_eq!(
-			Supersig::get_proposal_state(supersig_id, call_id),
-			(true, vec![], 3, 0)
-		);
-		assert_ok!(Supersig::approve_call(
-			Origin::signed(BOB()),
-			supersig_account.clone(),
-			call_id
-		));
-		assert_eq!(
-			Supersig::get_proposal_state(supersig_id, call_id),
-			(true, vec![BOB()], 3, 1)
-		);
-		call_id += 1;
 
-		assert_ok!(Supersig::submit_call(
-			Origin::signed(ALICE()),
-			supersig_account.clone(),
-			Box::new(call.clone())
-		));
 		assert_eq!(
-			Supersig::get_proposal_state(supersig_id, call_id),
-			(true, vec![], 3, 0)
-		);
-		assert_ok!(Supersig::approve_call(
-			Origin::signed(BOB()),
-			supersig_account.clone(),
-			call_id
-		));
-		assert_eq!(
-			Supersig::get_proposal_state(supersig_id, call_id),
-			(true, vec![BOB()], 3, 1)
+			Supersig::get_proposal_state(0, 0),
+			Some((ProposalState::new(0, call.clone(), ALICE(), vec![]), 3))
 		);
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
 			supersig_account.clone(),
-			call_id
+			0,
 		));
-		// Here the expected behaviour is :
-		// Proposal has been deleted because 2 of 3 voted.
+
 		assert_eq!(
-			Supersig::get_proposal_state(supersig_id, call_id),
-			(false, vec![], 3, 0)
+			Supersig::get_proposal_state(0, 0),
+			Some((
+				ProposalState::new(0, call.clone(), ALICE(), vec![ALICE()]),
+				3
+			))
 		);
+
+		assert_ok!(Supersig::approve_call(
+			Origin::signed(BOB()),
+			supersig_account.clone(),
+			0,
+		));
+
+		assert_eq!(Supersig::get_proposal_state(0, 0), None);
 	})
 }
