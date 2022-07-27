@@ -21,3 +21,4 @@ sp-std = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate
 sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
 
 pallet-supersig-rpc-runtime-api = { path = "./runtime-api" }
+pallet-supersig = { path = ".." }
