@@ -99,7 +99,7 @@ fn get_proposals() {
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
-			supersig_account.clone(),
+			supersig_account,
 			1,
 		));
 
@@ -139,15 +139,12 @@ fn get_proposal_state() {
 
 		assert_eq!(
 			Supersig::get_proposal_state(0, 0),
-			Some((
-				ProposalState::new(0, call.clone(), ALICE(), vec![ALICE()]),
-				3
-			))
+			Some((ProposalState::new(0, call, ALICE(), vec![ALICE()]), 3))
 		);
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(BOB()),
-			supersig_account.clone(),
+			supersig_account,
 			0,
 		));
 
