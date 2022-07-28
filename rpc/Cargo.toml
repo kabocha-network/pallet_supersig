@@ -16,9 +16,9 @@ scale-info = { version = "2.1.1", default-features = false, features = [
 
 jsonrpsee = { version = "0.14.0", features = ["server", "macros"] }
 
-sp-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
-sp-std = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
-sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+sp-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
+sp-std = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
+sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 
 pallet-supersig-rpc-runtime-api = { path = "./runtime-api" }
 pallet-supersig = { path = ".." }
