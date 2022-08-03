@@ -1,5 +1,6 @@
 use super::{helper::*, mock::*};
 use crate::{rpc::ProposalState, Role};
+use codec::Encode;
 use frame_support::assert_ok;
 pub use sp_std::{boxed::Box, mem::size_of};
 
@@ -94,8 +95,8 @@ fn get_proposals() {
 		let list = Supersig::list_proposals(&0);
 		assert_eq!(list.1, 3);
 		assert_eq!(list.0.len(), 2);
-		assert!(list.0.contains(&ProposalState::new(0, ALICE(), vec![BOB()])));
-		assert!(list.0.contains(&ProposalState::new(1, ALICE(), vec![BOB()])));
+		assert!(list.0.contains(&ProposalState::new(0, call.encode(), ALICE(), vec![BOB()])));
+		assert!(list.0.contains(&ProposalState::new(1, call.encode(), ALICE(), vec![BOB()])));
 
 		assert_ok!(Supersig::approve_call(
 			Origin::signed(ALICE()),
@@ -105,7 +106,10 @@ fn get_proposals() {
 
 		assert_eq!(
 			Supersig::list_proposals(&0),
-			(vec![ProposalState::new(0, ALICE(), vec![BOB()])], 3)
+			(
+				vec![ProposalState::new(0, call.encode(), ALICE(), vec![BOB()])],
+				3
+			)
 		);
 	})
 }
@@ -128,7 +132,7 @@ fn get_proposal_state() {
 
 		assert_eq!(
 			Supersig::get_proposal_state(&0, &0),
-			Some((ProposalState::new(0, ALICE(), vec![]), 3))
+			Some((ProposalState::new(0, call.encode(), ALICE(), vec![]), 3))
 		);
 
 		assert_ok!(Supersig::approve_call(
@@ -139,7 +143,10 @@ fn get_proposal_state() {
 
 		assert_eq!(
 			Supersig::get_proposal_state(&0, &0),
-			Some((ProposalState::new(0, ALICE(), vec![ALICE()]), 3))
+			Some((
+				ProposalState::new(0, call.encode(), ALICE(), vec![ALICE()]),
+				3
+			))
 		);
 
 		assert_ok!(Supersig::approve_call(

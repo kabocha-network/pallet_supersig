@@ -8,14 +8,21 @@ use crate::{CallId, Calls, Config, Error, Members, MembersVotes, Pallet, Role, S
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct ProposalState<AccountId> {
 	id: CallId,
+	encoded_call: Vec<u8>,
 	provider: AccountId,
 	voters: Vec<AccountId>,
 }
 
 impl<AccoutId: Clone> ProposalState<AccoutId> {
-	pub fn new(id: CallId, provider: AccoutId, voters: Vec<AccoutId>) -> Self {
+	pub fn new(
+		id: CallId,
+		encoded_call: Vec<u8>,
+		provider: AccoutId,
+		voters: Vec<AccoutId>,
+	) -> Self {
 		Self {
 			id,
+			encoded_call,
 			provider,
 			voters,
 		}
@@ -67,7 +74,7 @@ impl<T: Config> Pallet<T> {
 					)
 					.collect();
 
-				ProposalState::new(call_id, call.provider, voters)
+				ProposalState::new(call_id, call.data, call.provider, voters)
 			})
 			.collect();
 		(proposal_state, member_count)
@@ -88,7 +95,7 @@ impl<T: Config> Pallet<T> {
 			.collect();
 
 		Some((
-			ProposalState::new(*call_id, call.provider, voters),
+			ProposalState::new(*call_id, call.data, call.provider, voters),
 			member_count,
 		))
 	}
