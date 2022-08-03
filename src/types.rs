@@ -7,6 +7,7 @@ pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[derive(Clone, Encode, Decode, TypeInfo, PartialEq, Eq, MaxEncodedLen, Debug)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[codec(mel_bound())]
 pub enum Role {
 	Standard,
