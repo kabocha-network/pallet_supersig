@@ -14,11 +14,11 @@ scale-info = { version = "2.1.1", default-features = false, features = [
 	"derive",
 ] }
 
-jsonrpsee = { version = "0.14.0", default-features = false, features = ["server", "macros"] }
+jsonrpsee = { version = "0.13.0", features = ["server", "macros"] }
 
 sp-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 sp-std = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.26" }
 
-pallet-supersig-rpc-runtime-api = { default-features = false, path = "./runtime-api" }
-pallet-supersig = { default-features = false, path = ".." }
+pallet-supersig = { path = ".." }
+pallet-supersig-rpc-runtime-api = { path = "./runtime-api" }
