@@ -622,7 +622,7 @@ pub mod pallet {
 		fn unchecked_remove_call_from_storages(supersig_id: SupersigId, call_id: CallId) {
 			Calls::<T>::remove(supersig_id, call_id);
 			Votes::<T>::remove(supersig_id, call_id);
-			MembersVotes::<T>::remove_prefix((supersig_id, call_id), None);
+			let _ = MembersVotes::<T>::clear_prefix((supersig_id, call_id),u32::MAX, None);
 		}
 
 		fn unchecked_remove_supersig_from_storages(
@@ -630,11 +630,11 @@ pub mod pallet {
 			supersig_account: &T::AccountId,
 		) {
 			NonceCall::<T>::remove(supersig_id);
-			Members::<T>::remove_prefix(supersig_id, None);
+			let _ = Members::<T>::clear_prefix(supersig_id, u32::MAX, None);
 			TotalMembers::<T>::remove(supersig_id);
-			Calls::<T>::remove_prefix(supersig_id, None);
-			Votes::<T>::remove_prefix(supersig_id, None);
-			MembersVotes::<T>::remove_prefix((supersig_id,), None);
+			let _ = Calls::<T>::clear_prefix(supersig_id,u32::MAX, None);
+			let _ = Votes::<T>::clear_prefix(supersig_id, u32::MAX, None);
+			let _ = MembersVotes::<T>::clear_prefix((supersig_id,), u32::MAX, None);
 
 			frame_system::Pallet::<T>::dec_consumers(supersig_account);
 		}
