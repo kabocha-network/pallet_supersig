@@ -14,37 +14,31 @@ use pallet_supersig::{rpc::ProposalState, CallId, Role, SupersigId};
 
 #[rpc(client, server)]
 pub trait SuperSigApi<BlockHash, AccountId> {
-	#[method(name = "superSig_getSupersigId")]
-	fn get_supersig_id(
-		&self,
-		supersig_account: AccountId,
-		at: Option<BlockHash>,
-	) -> RpcResult<Option<SupersigId>>;
 	#[method(name = "superSig_getUserSupersigs")]
 	fn get_user_supersigs(
 		&self,
-		who: AccountId,
+		user_account: AccountId,
 		at: Option<BlockHash>,
 	) -> RpcResult<Vec<SupersigId>>;
 	#[method(name = "superSig_listMembers")]
 	fn list_members(
 		&self,
-		supersig_id: SupersigId,
+		supersig_account: AccountId,
 		at: Option<BlockHash>,
 	) -> RpcResult<Vec<(AccountId, Role)>>;
 	#[method(name = "superSig_listProposals")]
 	fn list_proposals(
 		&self,
-		supersig_id: SupersigId,
+		supersig_account: AccountId,
 		at: Option<BlockHash>,
 	) -> RpcResult<(Vec<ProposalState<AccountId>>, u32)>;
 	#[method(name = "superSig_getProposalState")]
 	fn get_proposal_state(
 		&self,
-		supersig_id: SupersigId,
+		supersig_account: AccountId,
 		call_id: CallId,
 		at: Option<BlockHash>,
-	) -> RpcResult<Option<(ProposalState<AccountId>, u32)>>;
+	) -> RpcResult<(ProposalState<AccountId>, u32)>;
 }
 
 /// SuperSig RPC methods.
@@ -71,55 +65,45 @@ where
 	Client::Api: SuperSigRuntimeApi<Block, AccountId>,
 	AccountId: Codec,
 {
-	fn get_supersig_id(
-		&self,
-		supersig_account: AccountId,
-		at: Option<<Block as BlockT>::Hash>,
-	) -> RpcResult<Option<SupersigId>> {
-		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-		api.get_supersig_id(&at, supersig_account).map_err(runtime_error_into_rpc_err)
-	}
-
 	fn get_user_supersigs(
 		&self,
-		who: AccountId,
+		user_account: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<Vec<SupersigId>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-		api.get_user_supersigs(&at, who).map_err(runtime_error_into_rpc_err)
+		api.get_user_supersigs(&at, user_account).map_err(runtime_error_into_rpc_err)
 	}
 
 	fn list_members(
 		&self,
-		supersig_id: SupersigId,
+		supersig_account: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<Vec<(AccountId, Role)>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-		api.list_members(&at, supersig_id).map_err(runtime_error_into_rpc_err)
+		api.list_members(&at, supersig_account).map_err(runtime_error_into_rpc_err)
 	}
 
 	fn list_proposals(
 		&self,
-		supersig_id: SupersigId,
+		supersig_account: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> RpcResult<(Vec<ProposalState<AccountId>>, u32)> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-		api.list_proposals(&at, supersig_id).map_err(runtime_error_into_rpc_err)
+		api.list_proposals(&at, supersig_account).map_err(runtime_error_into_rpc_err)
 	}
 
 	fn get_proposal_state(
 		&self,
-		supersig_id: SupersigId,
+		supersig_account: AccountId,
 		call_id: CallId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> RpcResult<Option<(ProposalState<AccountId>, u32)>> {
+	) -> RpcResult<(ProposalState<AccountId>, u32)> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-		api.get_proposal_state(&at, supersig_id, call_id)
+		api.get_proposal_state(&at, supersig_account, call_id)
 			.map_err(runtime_error_into_rpc_err)
 	}
 }
