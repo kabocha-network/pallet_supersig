@@ -72,7 +72,10 @@ where
 	) -> RpcResult<Vec<SupersigId>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-		api.get_user_supersigs(&at, user_account).map_err(runtime_error_into_rpc_err)
+		let supersigs =
+			api.get_user_supersigs(&at, user_account).map_err(runtime_error_into_rpc_err)?;
+
+		Ok(supersigs)
 	}
 
 	fn list_members(
@@ -82,7 +85,12 @@ where
 	) -> RpcResult<Vec<(AccountId, Role)>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-		api.list_members(&at, supersig_account).map_err(runtime_error_into_rpc_err)
+		let members = api
+			.list_members(&at, supersig_account)
+			.map_err(runtime_error_into_rpc_err)?
+			.map_err(supersig_rpc_error)?;
+
+		Ok(members)
 	}
 
 	fn list_proposals(
@@ -92,7 +100,12 @@ where
 	) -> RpcResult<(Vec<ProposalState<AccountId>>, u32)> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-		api.list_proposals(&at, supersig_account).map_err(runtime_error_into_rpc_err)
+		let proposals = api
+			.list_proposals(&at, supersig_account)
+			.map_err(runtime_error_into_rpc_err)?
+			.map_err(supersig_rpc_error)?;
+
+		Ok(proposals)
 	}
 
 	fn get_proposal_state(
@@ -103,18 +116,32 @@ where
 	) -> RpcResult<(ProposalState<AccountId>, u32)> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or_else(|| self.client.info().best_hash));
-		api.get_proposal_state(&at, supersig_account, call_id)
-			.map_err(runtime_error_into_rpc_err)
+		let state = api
+			.get_proposal_state(&at, supersig_account, call_id)
+			.map_err(runtime_error_into_rpc_err)?
+			.map_err(supersig_rpc_error)?;
+
+		Ok(state)
 	}
 }
 
 const RUNTIME_ERROR: i32 = 1;
+const SUPERSIG_ERROR: i32 = 2;
 
 /// Converts a runtime trap into an RPC error.
 fn runtime_error_into_rpc_err(err: impl std::fmt::Debug) -> JsonRpseeError {
 	CallError::Custom(ErrorObject::owned(
 		RUNTIME_ERROR,
 		"Runtime error",
+		Some(format!("{:?}", err)),
+	))
+	.into()
+}
+
+fn supersig_rpc_error(err: impl std::fmt::Debug) -> JsonRpseeError {
+	CallError::Custom(ErrorObject::owned(
+		SUPERSIG_ERROR,
+		"Supersig error",
 		Some(format!("{:?}", err)),
 	))
 	.into()
