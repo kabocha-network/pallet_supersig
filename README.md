@@ -59,6 +59,11 @@ The Supersig pallet provide function for:
 
 - `leave_supersig` - remove the caller from the supersig.
 
+## Test
+
+To run the tests in this pallet run:
+`cargo test`
+
 ### Licence
 
 SPDX-License-Identifier: Apache-2.0
