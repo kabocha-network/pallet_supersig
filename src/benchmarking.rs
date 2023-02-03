@@ -5,8 +5,8 @@ use super::*;
 
 use crate::Pallet;
 use frame_benchmarking::{account as benchmark_account, benchmarks};
-use frame_support::{assert_ok, storage::bounded_vec::*, traits::Get};
-use frame_system::RawOrigin;
+use frame_support::{assert_ok, storage::bounded_vec::*, traits::Get, PalletId};
+use frame_system::{RawOrigin, Call};
 use sp_std::vec;
 
 pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
@@ -35,7 +35,7 @@ benchmarks! {
 
 	submit_call {
 		let z in 0 .. 100_000;
-		let call: <T as Config>::Call = frame_system::Call::<T>::remark {
+		let call: <T as Config>::RuntimeCall = frame_system::Call::<T>::remark {
 			remark: vec![0; z as usize]
 		}.into();
 
@@ -45,6 +45,7 @@ benchmarks! {
 		let val: BalanceOf<T> = 4_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
+		
 		let supersig_id = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		let members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
 
@@ -59,7 +60,7 @@ benchmarks! {
 	}
 
 	approve_call {
-		let call: <T as Config>::Call = frame_system::Call::<T>::remark {
+		let call: <T as Config>::RuntimeCall = frame_system::Call::<T>::remark {
 			remark: vec![0; 0]
 		}.into();
 
@@ -88,7 +89,7 @@ benchmarks! {
 	}
 
 	remove_call {
-		let call: <T as Config>::Call = frame_system::Call::<T>::remark {
+		let call: <T as Config>::RuntimeCall = frame_system::Call::<T>::remark {
 			remark: vec![0; 0]
 		}.into();
 

@@ -52,6 +52,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+
+use frame_system::Config;
+
+
 pub use pallet::*;
 
 #[cfg(test)]
@@ -61,10 +65,10 @@ mod tests;
 mod benchmarking;
 
 pub use frame_support::{
+	dispatch::{GetDispatchInfo, PostDispatchInfo},
 	dispatch::DispatchResult,
 	traits::{tokens::ExistenceRequirement, Currency, ReservableCurrency},
 	transactional,
-	weights::{GetDispatchInfo, PostDispatchInfo},
 	PalletId,
 };
 pub use sp_core::Hasher;
@@ -91,7 +95,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// the obiquitous event type
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// The trait to manage funds
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		/// The base id used for accountId calculation
@@ -99,7 +103,7 @@ pub mod pallet {
 		type PalletId: Get<PalletId>;
 		/// The call type
 		type Call: Parameter
-			+ Dispatchable<Origin = Self::Origin, PostInfo = PostDispatchInfo>
+			+ Dispatchable<RuntimeOrigin = Self::RuntimeOrigin, PostInfo = PostDispatchInfo>
 			+ GetDispatchInfo
 			+ From<frame_system::Call<Self>>;
 
@@ -240,6 +244,7 @@ pub mod pallet {
 		/// - `Currency::transfer` will be called once to deposit an existencial amount on supersig
 		/// - `frame_system::inc_consumers` will be called once to protect the supersig from
 		///   deletion
+		#[pallet::call_index(0)]
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::create_supersig(members.len() as u32))]
 		pub fn create_supersig(
@@ -254,7 +259,7 @@ pub mod pallet {
 				return Err(Error::<T>::InvalidNumberOfMembers.into())
 			}
 
-			// Get it id and associated account
+			// Get id and associated account
 			let supersig_id = Self::nonce_supersig();
 			let supersig_account: T::AccountId = T::PalletId::get()
 				.try_into_sub_account(supersig_id)
@@ -299,6 +304,7 @@ pub mod pallet {
 		///
 		/// Related functions:
 		/// - `Currency::reserve` will be called once to lock the deposit amount
+		#[pallet::call_index(1)]
 		#[pallet::weight(T::WeightInfo::submit_call(call.encode().len() as u32))]
 		pub fn submit_call(
 			origin: OriginFor<T>,
@@ -343,6 +349,7 @@ pub mod pallet {
 		///
 		/// Related functions:
 		/// - `Currency::unreserve` will be called once IF SimpleMajority is reached
+		#[pallet::call_index(2)]
 		#[pallet::weight(T::WeightInfo::approve_call())]
 		pub fn approve_call(
 			origin: OriginFor<T>,
@@ -416,6 +423,7 @@ pub mod pallet {
 		///
 		/// Related functions:
 		/// - `Currency::unreserve` will be called once
+		#[pallet::call_index(3)]
 		#[pallet::weight(T::WeightInfo::remove_call())]
 		pub fn remove_call(
 			origin: OriginFor<T>,
@@ -448,6 +456,7 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the supersig
 		///
 		/// # <weight>
+		#[pallet::call_index(4)]
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::add_members(new_members.len() as u32))]
 		pub fn add_members(
@@ -477,6 +486,7 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the supersig
 		///
 		/// # <weight>
+		#[pallet::call_index(5)]
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::remove_members(members_to_remove.len() as u32))]
 		pub fn remove_members(
@@ -519,6 +529,7 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the supersig
 		///
 		/// # <weight>
+		#[pallet::call_index(6)]
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::delete_supersig())]
 		pub fn delete_supersig(origin: OriginFor<T>, beneficiary: T::AccountId) -> DispatchResult {
@@ -561,6 +572,7 @@ pub mod pallet {
 		/// The dispatch origin for this call must be `Signed` by the user.
 		///
 		/// # <weight>
+		#[pallet::call_index(7)]
 		#[pallet::weight(T::WeightInfo::leave_supersig())]
 		pub fn leave_supersig(
 			origin: OriginFor<T>,
