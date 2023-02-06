@@ -3,6 +3,7 @@ use crate::{rpc::ProposalState, Error, Role};
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::{boxed::Box, mem::size_of};
+use frame_system::{Call, Origin};
 
 fn create_supersig(supersig_id: u128) -> sp_runtime::AccountId32 {
 	let creator = vec![(ALICE(), Role::Master)].try_into().unwrap();

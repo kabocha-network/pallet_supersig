@@ -2,6 +2,7 @@ use super::{helper::*, mock::*};
 use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
+use frame_system::{Call, Origin};
 
 ////////////
 //
@@ -43,7 +44,7 @@ fn approve_call() {
 		assert!(!Supersig::members_votes((0, 0, BOB())));
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallVoted(supersig_account, 0, ALICE()))
+			RuntimeEvent::Supersig(crate::Event::CallVoted(supersig_account, 0, ALICE()))
 		);
 	})
 }
@@ -107,7 +108,7 @@ fn approve_call_until_threshold() {
 		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallExecutionAttempted(
+			RuntimeEvent::Supersig(crate::Event::CallExecutionAttempted(
 				supersig_account,
 				0,
 				Ok(Ok(()))
@@ -175,7 +176,7 @@ fn approve_call_as_master() {
 		assert_eq!(bob_balance + 100_000, Balances::free_balance(BOB()));
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallExecutionAttempted(
+			RuntimeEvent::Supersig(crate::Event::CallExecutionAttempted(
 				supersig_account,
 				0,
 				Ok(Ok(()))

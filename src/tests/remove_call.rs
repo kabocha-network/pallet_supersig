@@ -2,6 +2,7 @@ use super::{helper::*, mock::*};
 use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
+use frame_system::{Call, Origin};
 
 #[test]
 fn remove_call() {
@@ -38,7 +39,7 @@ fn remove_call() {
 		assert!(!Supersig::members_votes((0, 0, BOB())));
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallRemoved(supersig_account, 0))
+			RuntimeEvent::Supersig(crate::Event::CallRemoved(supersig_account, 0))
 		);
 	})
 }

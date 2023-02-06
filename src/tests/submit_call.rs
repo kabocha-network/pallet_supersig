@@ -3,6 +3,7 @@ use crate::{Config as SuperConfig, Error, Role};
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
+use frame_system::{Call, Origin};
 
 #[test]
 fn submit_calls() {
@@ -40,7 +41,7 @@ fn submit_calls() {
 		assert_eq!(Supersig::nonce_call(0), 1);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallSubmitted(
+			RuntimeEvent::Supersig(crate::Event::CallSubmitted(
 				supersig_account.clone(),
 				0,
 				ALICE()
@@ -54,7 +55,7 @@ fn submit_calls() {
 		assert_eq!(Supersig::nonce_call(0), 2);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallSubmitted(
+			RuntimeEvent::Supersig(crate::Event::CallSubmitted(
 				supersig_account.clone(),
 				1,
 				BOB()
@@ -68,7 +69,7 @@ fn submit_calls() {
 		assert_eq!(Supersig::nonce_call(0), 3);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallSubmitted(supersig_account, 2, CHARLIE()))
+			RuntimeEvent::Supersig(crate::Event::CallSubmitted(supersig_account, 2, CHARLIE()))
 		);
 	})
 }

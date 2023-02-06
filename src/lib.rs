@@ -224,6 +224,8 @@ pub mod pallet {
 		BadEncodedCall,
 		/// no more valid supersig nonce
 		InvalidNonce,
+		/// the tx failed after execution attempt
+		TxFailed,
 	}
 
 	#[pallet::call]
@@ -396,10 +398,10 @@ pub mod pallet {
 								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
 							)
 							.map(|_| ())
-							.map_err(|e| e.error))
+							.map_err(|_| Error::<T>::TxFailed)?
 					} else {
 						Err(Error::<T>::BadEncodedCall.into())
-					};
+					} ;
 
 					Self::deposit_event(Event::<T>::CallExecutionAttempted(
 						supersig_account,

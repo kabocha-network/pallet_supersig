@@ -1,5 +1,6 @@
 use crate as pallet_supersig;
 use frame_support::{parameter_types, traits::Everything, PalletId};
+use frame_system::{Call, Origin, Event};
 use frame_system as system;
 use sp_core::{sr25519, Pair, Public, H256};
 use sp_runtime::{
@@ -12,14 +13,14 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 
-#[frame_support::pallet]
+#[frame_support::pallet(dev_mode)]
 pub mod nothing {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 	}
 
 	#[pallet::pallet]
@@ -57,7 +58,7 @@ frame_support::construct_runtime!(
 );
 
 impl nothing::Config for Test {
-	type Event = Event;
+	type RuntimeEvent = Event;
 }
 
 parameter_types! {
@@ -73,9 +74,9 @@ impl system::Config for Test {
 	type BlockLength = ();
 	type BlockNumber = u64;
 	type BlockWeights = ();
-	type Call = Call;
+	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
-	type Event = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type Header = Header;
@@ -85,7 +86,7 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
 	type OnSetCode = ();
-	type Origin = Origin;
+	type RuntimeOrigin = frame_system::Origin;
 	type PalletInfo = PalletInfo;
 	type SS58Prefix = SS58Prefix;
 	type SystemWeightInfo = ();
@@ -104,7 +105,7 @@ impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type Balance = Balance;
 	type DustRemoval = ();
-	type Event = Event;
+	type RuntimeEvent = Event;
 	type ExistentialDeposit = ExistentialDeposit;
 	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
@@ -119,10 +120,10 @@ parameter_types! {
 }
 
 impl pallet_supersig::Config for Test {
-	type Call = Call;
+	type Call = Call<T>;
 	type Currency = Balances;
 	type DepositPerByte = SupersigPreimageByteDeposit;
-	type Event = Event;
+	type RuntimeEvent = Event<T>;
 	type MaxAccountsPerTransaction = MaxAccountsPerTransaction;
 	type PalletId = SupersigPalletId;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;

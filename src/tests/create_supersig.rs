@@ -2,6 +2,7 @@ use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 pub use sp_std::{boxed::Box, cmp::min, mem::size_of};
+use frame_system::{Call, Origin};
 
 #[test]
 fn create_supersig() {
@@ -36,14 +37,14 @@ fn create_supersig() {
 		let mut events = frame_system::Pallet::<Test>::events();
 		assert_eq!(
 			events.pop().expect("expect event").event,
-			Event::Supersig(crate::Event::MembersAdded(
+			RuntimeEvent::Supersig(crate::Event::MembersAdded(
 				get_supersig_account(0),
 				members.into()
 			))
 		);
 		assert_eq!(
 			events.pop().expect("expect event").event,
-			Event::Supersig(crate::Event::SupersigCreated(get_supersig_account(0)))
+			RuntimeEvent::Supersig(crate::Event::SupersigCreated(get_supersig_account(0)))
 		);
 	});
 }
@@ -81,14 +82,14 @@ fn create_supersig_with_master() {
 		let mut events = frame_system::Pallet::<Test>::events();
 		assert_eq!(
 			events.pop().expect("expect event").event,
-			Event::Supersig(crate::Event::MembersAdded(
+			RuntimeEvent::Supersig(crate::Event::MembersAdded(
 				get_supersig_account(0),
 				members.into()
 			))
 		);
 		assert_eq!(
 			events.pop().expect("expect event").event,
-			Event::Supersig(crate::Event::SupersigCreated(get_supersig_account(0)))
+			RuntimeEvent::Supersig(crate::Event::SupersigCreated(get_supersig_account(0)))
 		);
 	});
 }

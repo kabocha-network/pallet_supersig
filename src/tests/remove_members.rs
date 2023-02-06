@@ -2,6 +2,7 @@ use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::{boxed::Box, mem::size_of};
+use frame_system::{Call, Origin};
 
 #[test]
 fn remove_members() {
@@ -34,7 +35,7 @@ fn remove_members() {
 		assert_eq!(Balances::reserved_balance(get_supersig_account(0)), reserve);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::MembersRemoved(
+			RuntimeEvent::Supersig(crate::Event::MembersRemoved(
 				supersig_account,
 				vec!(BOB(), CHARLIE())
 			))

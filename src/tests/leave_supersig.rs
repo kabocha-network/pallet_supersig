@@ -2,6 +2,7 @@ use super::{helper::*, mock::*};
 use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
+use frame_system::{Call, Origin};
 
 #[test]
 fn leave_supersig() {
@@ -27,7 +28,7 @@ fn leave_supersig() {
 
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::SupersigLeaved(supersig_account, ALICE()))
+			RuntimeEvent::Supersig(crate::Event::SupersigLeaved(supersig_account, ALICE()))
 		);
 	})
 }

@@ -1,6 +1,7 @@
 use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
+use frame_system::{Call, Origin};
 pub use sp_std::{boxed::Box, mem::size_of};
 
 #[test]
@@ -47,7 +48,7 @@ fn delete_supersig() {
 		);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::SupersigRemoved(supersig_account))
+			RuntimeEvent::Supersig(crate::Event::SupersigRemoved(supersig_account))
 		);
 	})
 }
@@ -105,7 +106,7 @@ fn delete_supersig_with_call() {
 		assert_eq!(Balances::reserved_balance(BOB()), 0);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::SupersigRemoved(supersig_account))
+			RuntimeEvent::Supersig(crate::Event::SupersigRemoved(supersig_account))
 		);
 	})
 }

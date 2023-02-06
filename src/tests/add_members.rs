@@ -2,6 +2,7 @@ use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok, BoundedVec};
 pub use sp_std::{boxed::Box, mem::size_of};
+use frame_system::Origin;
 
 #[test]
 fn add_members() {
@@ -31,7 +32,7 @@ fn add_members() {
 		assert_eq!(Balances::reserved_balance(get_supersig_account(0)), deposit);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::MembersAdded(
+			RuntimeEvent::Supersig(crate::Event::MembersAdded(
 				supersig_account,
 				vec!((CHARLIE(), Role::Standard))
 			))
