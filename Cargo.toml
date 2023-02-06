@@ -34,8 +34,10 @@ sp-io = { git = "https://github.com/paritytech/substrate", default-features = fa
 pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.37" }
 
 [features]
-default = ["std", "runtime-benchmarks"]
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+default = ["std"
+#, "runtime-benchmarks"
+]
+# runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 std = [
 	"serde",
 	"codec/std",
@@ -46,6 +48,6 @@ std = [
 	"pallet-balances/std",
 	"frame-support/std",
 	"frame-system/std",
-	"frame-benchmarking/std",
+	"frame-benchmarking?/std",
 ]
 try-runtime = ["frame-support/try-runtime"]

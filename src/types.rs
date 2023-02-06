@@ -22,6 +22,7 @@ impl Default for Role {
 }
 
 #[derive(Clone, Encode, Decode, TypeInfo, Debug)]
+#[scale_info(skip_type_params(T))]
 pub struct PreimageCall<AccountId, Balance> {
 	pub data: Vec<u8>,
 	pub provider: AccountId,

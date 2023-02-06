@@ -53,7 +53,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 
-use frame_system::Config;
+// use frame_system::Config;
 
 
 pub use pallet::*;
@@ -65,7 +65,7 @@ mod tests;
 mod benchmarking;
 
 pub use frame_support::{
-	dispatch::{GetDispatchInfo, PostDispatchInfo},
+	dispatch::{GetDispatchInfo, PostDispatchInfo, DispatchError},
 	dispatch::DispatchResult,
 	traits::{tokens::ExistenceRequirement, Currency, ReservableCurrency},
 	transactional,
