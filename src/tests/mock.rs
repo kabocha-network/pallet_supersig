@@ -1,4 +1,5 @@
 use crate as pallet_supersig;
+use crate::pallet::Config;
 use frame_support::{parameter_types, traits::Everything, PalletId};
 use frame_system::{Call, Origin, Event};
 use frame_system as system;
@@ -58,7 +59,7 @@ frame_support::construct_runtime!(
 );
 
 impl nothing::Config for Test {
-	type RuntimeEvent = Event;
+	type RuntimeEvent = RuntimeEvent;
 }
 
 parameter_types! {
@@ -105,7 +106,7 @@ impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type Balance = Balance;
 	type DustRemoval = ();
-	type RuntimeEvent = Event;
+	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
@@ -123,7 +124,7 @@ impl pallet_supersig::Config for Test {
 	type Call = Call<T>;
 	type Currency = Balances;
 	type DepositPerByte = SupersigPreimageByteDeposit;
-	type RuntimeEvent = Event<T>;
+	type Event = Event<T>;
 	type MaxAccountsPerTransaction = MaxAccountsPerTransaction;
 	type PalletId = SupersigPalletId;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;

@@ -2,7 +2,7 @@ use super::{helper::*, mock::*};
 use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
-use frame_system::{Call, Origin};
+use frame_system::{Origin};
 
 #[test]
 fn leave_supersig() {
