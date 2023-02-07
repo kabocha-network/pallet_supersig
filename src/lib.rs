@@ -56,7 +56,7 @@
 // use frame_system::Config;
 
 
-pub use pallet::*;
+// pub use pallet::*;
 
 #[cfg(test)]
 mod tests;
@@ -397,18 +397,17 @@ pub mod pallet {
 							.dispatch(
 								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
 							)
-							.map(|_| ())
-							.map_err(|_| Error::<T>::TxFailed)?)
+						)
 					} else {
 						Err(Error::<T>::BadEncodedCall.into())
-					} ;
+					}
 
 					Self::deposit_event(Event::<T>::CallExecutionAttempted(
 						supersig_account,
 						call_id,
 						res,
 					));
-				}
+				};
 			}
 
 			Ok(())
