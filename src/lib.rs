@@ -398,7 +398,7 @@ pub mod pallet {
 								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
 							)
 							.map(|_| ())
-							.map_err(|_| Error::<T>::TxFailed)?
+							.map_err(|_| Error::<T>::TxFailed)?)
 					} else {
 						Err(Error::<T>::BadEncodedCall.into())
 					} ;
