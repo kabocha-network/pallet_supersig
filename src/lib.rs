@@ -31,7 +31,7 @@
 //!   have to pass his adress into the list of added users.
 //!
 //! - `submit_call` - make a proposal on the specified supersig. an amount corresponding to the
-//!   length of the encoded call will be reserved.
+//!   length of the encoded call will be reserved. You need to wrap this around another call such as sending balance. Anything that requires a vote needs to be wrapped in a submitCall. 
 //!
 //! - `approve_call` - give a positive vote to a call. if the number of vote >= SimpleMajority, the
 //!   call is executed. An user can only approve a call once.
@@ -65,8 +65,7 @@ mod tests;
 mod benchmarking;
 
 pub use frame_support::{
-	dispatch::{GetDispatchInfo, PostDispatchInfo, DispatchError},
-	dispatch::DispatchResult,
+	dispatch::{GetDispatchInfo, PostDispatchInfo, DispatchResult, DispatchError, DispatchErrorWithPostInfo},
 	traits::{tokens::ExistenceRequirement, Currency, ReservableCurrency},
 	transactional,
 	PalletId,
@@ -88,7 +87,7 @@ pub use weights::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use super::*;
+	pub use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
@@ -188,7 +187,7 @@ pub mod pallet {
 		/// a Call has been voted [supersig, call_nonce, voter]
 		CallVoted(T::AccountId, CallId, T::AccountId),
 		/// a Call has been executed [supersig, call_nonce, result]
-		CallExecutionAttempted(T::AccountId, CallId, Result<DispatchResult, DispatchError>),
+		CallExecutionAttempted(T::AccountId, CallId, PostDispatchInfo, DispatchErrorWithPostInfo),
 		/// a Call has been removed [supersig, call_nonce]
 		CallRemoved(T::AccountId, CallId),
 		/// the list of users added to the supersig [supersig, [(user, role)]]
@@ -294,7 +293,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// submit a call to a specific supersig.
+		/// To create a proposal use submitCall. You need to wrap a submit call around all calls that require a vote. 
 		///
 		/// `submit_call` will create a proposal on the supersig, that members can approve.
 		/// this will lock an amount that depend on the lenght of the encoded call, to prevent spam
@@ -338,7 +337,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// vote for a call in the supersig
+		/// vote for a call in the supersig. You do not need to wrap this call in a submit call. 
 		///
 		/// `approve_call` will add a positive, unique vote to the specified call proposal.
 		/// if the numbers of votes on this proposal = SimpleMajority (51%), then the call is
@@ -396,9 +395,9 @@ pub mod pallet {
 						Ok(call
 							.dispatch(
 								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
-							)
-							.map(|_| ())
-							.map_err(|_| Error::<T>::TxFailed.into()))
+							))
+							//.map(|_| ())
+							// .map_err(|_| Error::<T>::TxFailed.into()))
 					} else {
 						Err(Error::<T>::BadEncodedCall.into())
 					};
@@ -414,7 +413,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// remove a call from the supersig
+		/// remove a call from the supersig. 
 		///
 		/// `remove_call` will remove a call from the poll.
 		///
@@ -450,7 +449,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// add members the supersig
+		/// add members the supersig. You need to wrap this in a submitCall function. 
 		///
 		/// `add members` will add a list of addesses to the members list of the supersig.
 		/// if an address is already present, it will be ignored.
@@ -567,7 +566,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// leave a supersig
+		/// leave a supersig, unless you are the only member, in which case you need to deleteSupersig.
 		///
 		/// `leave_supersig` will remove caller from selected supersig
 		///
@@ -601,7 +600,7 @@ pub mod pallet {
 			// A supersig should at least have one member
 			TotalMembers::<T>::try_mutate(supersig_id, |nb| {
 				if *nb == 1 {
-					return Err(Error::<T>::InvalidIfOnlyMember)
+					return Err(Error::<T>::MustHaveAtLeastOneMember)
 				};
 				*nb -= 1;
 				Ok(())
