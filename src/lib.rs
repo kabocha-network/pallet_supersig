@@ -187,7 +187,7 @@ pub mod pallet {
 		/// a Call has been voted [supersig, call_nonce, voter]
 		CallVoted(T::AccountId, CallId, T::AccountId),
 		/// a Call has been executed [supersig, call_nonce, result]
-		CallExecutionAttempted(T::AccountId, CallId, PostDispatchInfo, DispatchErrorWithPostInfo),
+		CallExecutionAttempted(T::AccountId, CallId, Result<DispatchResult, DispatchError>),
 		/// a Call has been removed [supersig, call_nonce]
 		CallRemoved(T::AccountId, CallId),
 		/// the list of users added to the supersig [supersig, [(user, role)]]
@@ -395,9 +395,9 @@ pub mod pallet {
 						Ok(call
 							.dispatch(
 								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
-							))
-							//.map(|_| ())
-							// .map_err(|_| Error::<T>::TxFailed.into()))
+							)
+							.map(|_| ())
+							.map_err(|_| Error::<T>::TxFailed.into()))
 					} else {
 						Err(Error::<T>::BadEncodedCall.into())
 					};
