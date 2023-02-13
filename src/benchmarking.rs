@@ -6,7 +6,7 @@ use super::*;
 use crate::Pallet;
 use frame_benchmarking::{account as benchmark_account, benchmarks};
 use frame_support::{assert_ok, storage::bounded_vec::*, traits::Get, PalletId};
-use frame_system::{Call, RawOrigin};
+use frame_system::RawOrigin;
 use sp_std::vec;
 
 pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
@@ -35,7 +35,7 @@ benchmarks! {
 
 	submit_call {
 		let z in 0 .. 100_000;
-		let call: <T as Config>::RuntimeCall = frame_system::Call::<T>::remark {
+		let call = frame_system::Call::remark {
 			remark: vec![0; z as usize]
 		}.into();
 
@@ -60,7 +60,7 @@ benchmarks! {
 	}
 
 	approve_call {
-		let call: <T as Config>::RuntimeCall = frame_system::Call::<T>::remark {
+		let call = frame_system::Call::remark {
 			remark: vec![0; 0]
 		}.into();
 
@@ -89,7 +89,7 @@ benchmarks! {
 	}
 
 	remove_call {
-		let call: <T as Config>::RuntimeCall = frame_system::Call::<T>::remark {
+		let call = frame_system::Call::remark {
 			remark: vec![0; 0]
 		}.into();
 
