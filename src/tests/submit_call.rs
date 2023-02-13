@@ -2,14 +2,14 @@ use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Role};
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
 pub use sp_std::boxed::Box;
-use frame_system::{Call, Origin};
 
 #[test]
 fn submit_calls() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -20,18 +20,21 @@ fn submit_calls() {
 		));
 		let supersig_account = get_supersig_account(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {
-			nothing: "test".into(),
-		});
-		let call1 = Call::Nothing(NoCall::do_nothing {
-			nothing: "test1".into(),
-		});
-		let call2 = Call::Nothing(NoCall::do_nothing {
-			nothing: "test2".into(),
-		});
+		let call: RuntimeCall = frame_system::Call::remark {
+			remark: "test".into(),
+		}
+		.into();
+		let call1: RuntimeCall = frame_system::Call::remark {
+			remark: "test1".into(),
+		}
+		.into();
+		let call2: RuntimeCall = frame_system::Call::remark {
+			remark: "test2".into(),
+		}
+		.into();
 
 		assert_ok!(Supersig::submit_call(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.clone())
 		));
@@ -48,7 +51,7 @@ fn submit_calls() {
 			))
 		);
 		assert_ok!(Supersig::submit_call(
-			Origin::signed(BOB()),
+			RawOrigin::Signed(BOB()).into(),
 			supersig_account.clone(),
 			Box::new(call1)
 		));
@@ -62,7 +65,7 @@ fn submit_calls() {
 			))
 		);
 		assert_ok!(Supersig::submit_call(
-			Origin::signed(CHARLIE()),
+			RawOrigin::Signed(CHARLIE()).into(),
 			supersig_account.clone(),
 			Box::new(call2)
 		));
@@ -77,7 +80,7 @@ fn submit_calls() {
 fn submit_supersig_doesnt_exist() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -88,12 +91,13 @@ fn submit_supersig_doesnt_exist() {
 		));
 		let bad_supersig_account = get_supersig_account(1);
 
-		let call = Call::Nothing(NoCall::do_nothing {
-			nothing: "test".into(),
-		});
+		let call: RuntimeCall = frame_system::Call::remark {
+			remark: "test".into(),
+		}
+		.into();
 		assert_noop!(
 			Supersig::submit_call(
-				Origin::signed(CHARLIE()),
+				RawOrigin::Signed(CHARLIE()).into(),
 				bad_supersig_account,
 				Box::new(call)
 			),

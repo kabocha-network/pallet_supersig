@@ -3,7 +3,9 @@ use codec::{Decode, Encode};
 use sp_runtime::DispatchError;
 pub use sp_std::{boxed::Box, cmp::max, mem::size_of};
 
-use crate::pallet::{CallId, Calls, Config, Error, Members, MembersVotes, Pallet, Role, SupersigId};
+use crate::pallet::{
+	CallId, Calls, Config, Error, Members, MembersVotes, Pallet, Role, SupersigId,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]

@@ -1,14 +1,14 @@
 use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
 pub use sp_std::{boxed::Box, mem::size_of};
-use frame_system::{Origin};
 
 #[test]
 fn remove_members() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -20,7 +20,7 @@ fn remove_members() {
 		));
 		let supersig_account = get_supersig_account(0);
 		assert_ok!(Supersig::remove_members(
-			Origin::signed(supersig_account.clone()),
+			RawOrigin::Signed(supersig_account.clone()).into(),
 			vec!(BOB(), CHARLIE(), CHARLIE()).try_into().unwrap()
 		));
 		assert_eq!(Supersig::members(0, ALICE()), Role::Standard);
@@ -47,7 +47,7 @@ fn remove_members() {
 fn remove_users_not_allowed() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -59,7 +59,7 @@ fn remove_users_not_allowed() {
 		));
 		assert_noop!(
 			Supersig::remove_members(
-				Origin::signed(ALICE()),
+				RawOrigin::Signed(ALICE()).into(),
 				vec!(BOB(), CHARLIE()).try_into().unwrap()
 			),
 			Error::<Test>::NotSupersig
@@ -71,7 +71,7 @@ fn remove_users_not_allowed() {
 fn remove_users_unknown_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -84,7 +84,7 @@ fn remove_users_unknown_supersig() {
 		let bad_supersig_account = get_supersig_account(1);
 		assert_noop!(
 			Supersig::remove_members(
-				Origin::signed(bad_supersig_account),
+				RawOrigin::Signed(bad_supersig_account).into(),
 				vec!(BOB(), CHARLIE()).try_into().unwrap()
 			),
 			Error::<Test>::NotSupersig
@@ -96,7 +96,7 @@ fn remove_users_unknown_supersig() {
 fn remove_users_leaving_0_users() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -107,10 +107,10 @@ fn remove_users_leaving_0_users() {
 		let supersig_account = get_supersig_account(0);
 		assert_noop!(
 			Supersig::remove_members(
-				Origin::signed(supersig_account),
+				RawOrigin::Signed(supersig_account).into(),
 				vec!(ALICE(), BOB()).try_into().unwrap()
 			),
-			Error::<Test>::InvalidNumberOfMembers
+			Error::<Test>::MustHaveAtLeastOneMember
 		);
 	})
 }

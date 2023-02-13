@@ -6,7 +6,7 @@ use super::*;
 use crate::Pallet;
 use frame_benchmarking::{account as benchmark_account, benchmarks};
 use frame_support::{assert_ok, storage::bounded_vec::*, traits::Get, PalletId};
-use frame_system::{RawOrigin, Call};
+use frame_system::{Call, RawOrigin};
 use sp_std::vec;
 
 pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
@@ -45,7 +45,7 @@ benchmarks! {
 		let val: BalanceOf<T> = 4_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
-		
+
 		let supersig_id = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		let members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
 

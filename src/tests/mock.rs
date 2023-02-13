@@ -1,7 +1,5 @@
 use crate as pallet_supersig;
-use crate::pallet::Config;
 use frame_support::{parameter_types, traits::Everything, PalletId};
-use frame_system::{Call, Origin, Event};
 use frame_system as system;
 use sp_core::{sr25519, Pair, Public, H256};
 use sp_runtime::{
@@ -14,36 +12,6 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 
-#[frame_support::pallet(dev_mode)]
-pub mod nothing {
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
-
-	#[pallet::config]
-	pub trait Config: frame_system::Config {
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-	}
-
-	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	#[pallet::without_storage_info]
-	pub struct Pallet<T>(PhantomData<T>);
-
-	#[pallet::event]
-	pub enum Event<T: Config> {
-		Nothing {},
-	}
-
-	#[pallet::call]
-	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1000)]
-		pub fn do_nothing(origin: OriginFor<T>, _nothing: Vec<u8>) -> DispatchResultWithPostInfo {
-			ensure_signed(origin)?;
-			Ok(().into())
-		}
-	}
-}
-
 frame_support::construct_runtime!(
 	pub enum Test where
 		Block = Block,
@@ -52,15 +20,10 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Supersig: pallet_supersig::{Pallet, Call, Storage, Event<T>},
-		Nothing: nothing::{Pallet, Call, Storage, Event<T>},
 
 		Balances: pallet_balances,
 	}
 );
-
-impl nothing::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
-}
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -75,9 +38,7 @@ impl system::Config for Test {
 	type BlockLength = ();
 	type BlockNumber = u64;
 	type BlockWeights = ();
-	type RuntimeCall = RuntimeCall;
 	type DbWeight = ();
-	type RuntimeEvent = RuntimeEvent;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type Header = Header;
@@ -87,8 +48,10 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type OnNewAccount = ();
 	type OnSetCode = ();
-	type RuntimeOrigin = frame_system::Origin;
 	type PalletInfo = PalletInfo;
+	type RuntimeCall = RuntimeCall;
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeOrigin = RuntimeOrigin;
 	type SS58Prefix = SS58Prefix;
 	type SystemWeightInfo = ();
 	type Version = ();
@@ -106,11 +69,11 @@ impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type Balance = Balance;
 	type DustRemoval = ();
-	type RuntimeEvent = RuntimeEvent;
 	type ExistentialDeposit = ExistentialDeposit;
 	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
+	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
 }
 
@@ -121,16 +84,14 @@ parameter_types! {
 }
 
 impl pallet_supersig::Config for Test {
-	type Call = Call<T>;
+	type Call = RuntimeCall;
 	type Currency = Balances;
 	type DepositPerByte = SupersigPreimageByteDeposit;
-	type Event = Event<T>;
 	type MaxAccountsPerTransaction = MaxAccountsPerTransaction;
 	type PalletId = SupersigPalletId;
+	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = pallet_supersig::weights::SubstrateWeight<Test>;
 }
-
-pub type NoCall = nothing::Call<Test>;
 
 type AccountPublic = <MultiSignature as Verify>::Signer;
 

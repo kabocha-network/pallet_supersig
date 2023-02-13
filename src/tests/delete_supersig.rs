@@ -1,14 +1,14 @@
 use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok, traits::ReservableCurrency};
-use frame_system::{Call, Origin};
+use frame_system::RawOrigin;
 pub use sp_std::{boxed::Box, mem::size_of};
 
 #[test]
 fn delete_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -21,12 +21,12 @@ fn delete_supersig() {
 		let bob_balance = Balances::free_balance(BOB());
 		let amount = 10_000u64;
 		assert_ok!(Balances::transfer(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			amount
 		));
 		assert_ok!(Supersig::delete_supersig(
-			Origin::signed(supersig_account.clone()),
+			RawOrigin::Signed(supersig_account.clone()).into(),
 			BOB()
 		));
 
@@ -57,7 +57,7 @@ fn delete_supersig() {
 fn delete_supersig_with_call() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -69,21 +69,21 @@ fn delete_supersig_with_call() {
 		let supersig_account = get_supersig_account(0);
 		let bob_balance = Balances::free_balance(BOB());
 		let amount = 10_000u64;
-		let call = Call::Nothing(NoCall::do_nothing {
-			nothing: "test".into(),
-		});
+		let call = frame_system::Call::remark {
+			remark: "test".into(),
+		};
 		assert_ok!(Balances::transfer(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			amount
 		));
 		assert_ok!(Supersig::submit_call(
-			Origin::signed(BOB()),
+			RawOrigin::Signed(BOB()).into(),
 			supersig_account.clone(),
-			Box::new(call)
+			Box::new(call.into())
 		));
 		assert_ok!(Supersig::delete_supersig(
-			Origin::signed(supersig_account.clone()),
+			RawOrigin::Signed(supersig_account.clone()).into(),
 			BOB()
 		));
 
@@ -115,7 +115,7 @@ fn delete_supersig_with_call() {
 fn delete_supersig_unknown_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -126,7 +126,7 @@ fn delete_supersig_unknown_supersig() {
 		));
 		let bad_supersig_account = get_supersig_account(1);
 		assert_noop!(
-			Supersig::delete_supersig(Origin::signed(bad_supersig_account), BOB()),
+			Supersig::delete_supersig(RawOrigin::Signed(bad_supersig_account).into(), BOB()),
 			Error::<Test>::NotSupersig
 		);
 	})
@@ -136,7 +136,7 @@ fn delete_supersig_unknown_supersig() {
 fn cannot_delete_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -148,13 +148,13 @@ fn cannot_delete_supersig() {
 		let supersig_account = get_supersig_account(0);
 		let amount = 10_000u64;
 		assert_ok!(Balances::transfer(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			amount
 		));
 		assert_ok!(Balances::reserve(&supersig_account, amount));
 		assert_noop!(
-			Supersig::delete_supersig(Origin::signed(supersig_account), BOB()),
+			Supersig::delete_supersig(RawOrigin::Signed(supersig_account).into(), BOB()),
 			Error::<Test>::SupersigHaveLockedFunds
 		);
 	})
@@ -164,7 +164,7 @@ fn cannot_delete_supersig() {
 fn cannot_liquidate_supersig() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -175,25 +175,25 @@ fn cannot_liquidate_supersig() {
 		));
 		let supersig_account = get_supersig_account(0);
 
-		let call = Call::Balances(pallet_balances::Call::transfer_all {
+		let call = pallet_balances::Call::transfer_all {
 			dest: ALICE(),
 			keep_alive: false,
-		});
+		};
 
 		assert_ok!(Supersig::submit_call(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
-			Box::new(call)
+			Box::new(call.into())
 		));
 
 		assert_ok!(Supersig::approve_call(
-			Origin::signed(BOB()),
+			RawOrigin::Signed(BOB()).into(),
 			supersig_account.clone(),
 			0
 		));
 
 		assert_ok!(Supersig::approve_call(
-			Origin::signed(CHARLIE()),
+			RawOrigin::Signed(CHARLIE()).into(),
 			supersig_account.clone(),
 			0
 		));
