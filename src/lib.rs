@@ -199,7 +199,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		/// supersig must have at least one member
-		InvalidNumberOfMembers,
+		MustHaveAtLeastOneMember,
 		/// the call origin is not an existing supersig
 		NotSupersig,
 		/// the call doesn't exist
@@ -220,6 +220,8 @@ pub mod pallet {
 		BadEncodedCall,
 		/// no more valid supersig nonce
 		InvalidNonce,
+		/// the tx failed after execution attempt
+		TxFailed,
 	}
 
 	#[pallet::call]
@@ -251,7 +253,7 @@ pub mod pallet {
 			// A supersig should at least have one member
 			let member_length = members.len();
 			if member_length < 1 {
-				return Err(Error::<T>::InvalidNumberOfMembers.into())
+				return Err(Error::<T>::MustHaveAtLeastOneMember.into())
 			}
 
 			// Get it id and associated account
@@ -382,14 +384,16 @@ pub mod pallet {
 					T::Currency::unreserve(&preimage.provider, preimage.deposit);
 
 					// Try to decode and execute the call
-					let res = if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..])
+					//let res = if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..])
+					let res = if let Ok(call) <T as Config>::Call::decode(&mut &preimage.data[..])
+					
 					{
 						Ok(call
 							.dispatch(
 								frame_system::RawOrigin::Signed(supersig_account.clone()).into(),
 							)
 							.map(|_| ())
-							.map_err(|e| e.error))
+							.map_err(|_| Error::<T>::TxFailed.into()))
 					} else {
 						Err(Error::<T>::BadEncodedCall.into())
 					};
@@ -587,7 +591,7 @@ pub mod pallet {
 			// A supersig should at least have one member
 			TotalMembers::<T>::try_mutate(supersig_id, |nb| {
 				if *nb == 1 {
-					return Err(Error::<T>::InvalidNumberOfMembers)
+					return Err(Error::<T>::MustHaveAtLeastOneMember)
 				};
 				*nb -= 1;
 				Ok(())
@@ -680,7 +684,7 @@ pub mod pallet {
 				let new_total_members =
 					n.saturating_sub(removed.len().try_into().map_err(|_| Error::<T>::Conversion)?);
 				if new_total_members < 1 {
-					return Err(Error::<T>::InvalidNumberOfMembers)
+					return Err(Error::<T>::MustHaveAtLeastOneMember)
 				}
 
 				*n = new_total_members;
