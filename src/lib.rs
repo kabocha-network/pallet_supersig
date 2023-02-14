@@ -186,7 +186,7 @@ pub mod pallet {
 		CallSubmitted(T::AccountId, CallId, T::AccountId),
 		/// a Call has been voted [supersig, call_nonce, voter]
 		CallVoted(T::AccountId, CallId, T::AccountId),
-		/// a Call has been executed [supersig, call_nonce, result]
+		/// a Call execution has been attempted [supersig, call_nonce, call_result]
 		CallExecutionAttempted(T::AccountId, CallId, DispatchResultWithPostInfo),
 		/// a Call has been removed [supersig, call_nonce]
 		CallRemoved(T::AccountId, CallId),

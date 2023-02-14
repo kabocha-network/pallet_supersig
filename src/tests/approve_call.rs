@@ -245,9 +245,6 @@ fn approve_failing_call_as_master() {
 			0
 		));
 
-		// the call have been approved, so it is executed, and then the call is deleted from
-		// storage
-
 		assert_eq!(Supersig::votes(0, 0), 0);
 		assert!(!Supersig::members_votes((0, 0, ALICE())));
 		assert!(!Supersig::members_votes((0, 0, BOB())));
