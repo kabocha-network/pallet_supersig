@@ -109,7 +109,7 @@ fn remove_users_leaving_0_users() {
 				Origin::signed(supersig_account),
 				vec!(ALICE(), BOB()).try_into().unwrap()
 			),
-			Error::<Test>::InvalidNumberOfMembers
+			Error::<Test>::MustHaveAtLeastOneMember
 		);
 	})
 }

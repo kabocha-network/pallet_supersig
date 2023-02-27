@@ -133,7 +133,7 @@ fn create_with_empty_list() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_noop!(
 			Supersig::create_supersig(Origin::signed(ALICE()), vec!().try_into().unwrap()),
-			Error::<Test>::InvalidNumberOfMembers
+			Error::<Test>::MustHaveAtLeastOneMember
 		);
 	});
 }

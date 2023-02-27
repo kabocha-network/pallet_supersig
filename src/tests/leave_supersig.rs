@@ -90,7 +90,7 @@ fn leave_supersig_last_user() {
 
 		assert_noop!(
 			Supersig::leave_supersig(Origin::signed(ALICE()), supersig_account),
-			Error::<Test>::InvalidNumberOfMembers
+			Error::<Test>::MustHaveAtLeastOneMember
 		);
 	})
 }

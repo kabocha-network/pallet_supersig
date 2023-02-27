@@ -2,6 +2,8 @@ use super::{helper::*, mock::*};
 use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
 pub use sp_std::boxed::Box;
+pub use frame_support::weights::{GetDispatchInfo, PostDispatchInfo};
+
 
 ////////////
 //
@@ -110,7 +112,7 @@ fn approve_call_until_threshold() {
 			Event::Supersig(crate::Event::CallExecutionAttempted(
 				supersig_account,
 				0,
-				Ok(Ok(()))
+				
 			))
 		);
 	})
