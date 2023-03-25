@@ -6,7 +6,7 @@ use frame_system::RawOrigin;
 pub use sp_std::boxed::Box;
 
 #[test]
-fn submit_calls() {
+fn propose_calls() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			RawOrigin::Signed(ALICE()).into(),
@@ -33,7 +33,7 @@ fn submit_calls() {
 		}
 		.into();
 
-		assert_ok!(Supersig::submit_call(
+		assert_ok!(Supersig::propose_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.clone())
@@ -50,7 +50,7 @@ fn submit_calls() {
 				ALICE()
 			))
 		);
-		assert_ok!(Supersig::submit_call(
+		assert_ok!(Supersig::propose_call(
 			RawOrigin::Signed(BOB()).into(),
 			supersig_account.clone(),
 			Box::new(call1)
@@ -64,7 +64,7 @@ fn submit_calls() {
 				BOB()
 			))
 		);
-		assert_ok!(Supersig::submit_call(
+		assert_ok!(Supersig::propose_call(
 			RawOrigin::Signed(CHARLIE()).into(),
 			supersig_account.clone(),
 			Box::new(call2)
@@ -96,7 +96,7 @@ fn submit_supersig_doesnt_exist() {
 		}
 		.into();
 		assert_noop!(
-			Supersig::submit_call(
+			Supersig::propose_call(
 				RawOrigin::Signed(CHARLIE()).into(),
 				bad_supersig_account,
 				Box::new(call)

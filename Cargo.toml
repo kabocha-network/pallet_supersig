@@ -1,11 +1,11 @@
 [package]
 name = "pallet-supersig"
-authors = ["Nathan GD <https://github.com/gdnathan>"]
+authors = ["Nathan GD <https://github.com/gdnathan>, Ramsey Ajram <https://github.com/decentration>"]
 description = "Pallet Supersig like multisig but with superpowers! Credit goes to Nathan GD for building, Timothee Delabro for supervising; Web3 Foundation and Edgeware for supporting, and Decentration as project and product design/management."
 version = "1.1.1"
 license = "Unlicense"
-homepage = "https://substrate.io"
-repository = "https://github.com/paritytech/substrate/"
+homepage = "https://decentration.org"
+repository = "https://github.com/decentration/pallet_supersig/"
 edition = "2021"
 
 [package.metadata.docs.rs]

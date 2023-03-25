@@ -22,7 +22,7 @@ fn remove_call() {
 		let call = frame_system::Call::remark {
 			remark: "test".into(),
 		};
-		assert_ok!(Supersig::submit_call(
+		assert_ok!(Supersig::propose_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())
@@ -62,7 +62,7 @@ fn non_allowed_remove_call() {
 		let call = frame_system::Call::remark {
 			remark: "test".into(),
 		};
-		assert_ok!(Supersig::submit_call(
+		assert_ok!(Supersig::propose_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())
@@ -92,7 +92,7 @@ fn remove_unknown_call() {
 		let call = frame_system::Call::remark {
 			remark: "test".into(),
 		};
-		assert_ok!(Supersig::submit_call(
+		assert_ok!(Supersig::propose_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())

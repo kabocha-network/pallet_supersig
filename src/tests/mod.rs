@@ -6,7 +6,7 @@ mod leave_supersig;
 mod remove_call;
 mod remove_members;
 mod rpc_calls;
-mod submit_call;
+mod propose_call;
 
 pub mod helper;
 pub mod mock;

@@ -32,7 +32,7 @@ use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
     fn create_supersig(z: u32, ) -> Weight;
-    fn submit_call(z: u32, ) -> Weight;
+    fn propose_call(z: u32, ) -> Weight;
     fn approve_call() -> Weight;
     fn remove_call() -> Weight;
     fn add_members(z: u32, ) -> Weight;
@@ -62,7 +62,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: System Account (r:1 w:1)
 	// Storage: Supersig NonceCall (r:1 w:1)
 	// Storage: Supersig Calls (r:0 w:1)
-	fn submit_call(z: u32, ) -> Weight {
+	fn propose_call(z: u32, ) -> Weight {
 		Weight::from_ref_time(42_824_000u64)
 			// Standard Error: 0
 			.saturating_add(Weight::from_ref_time(1_000u64).saturating_mul(z as u64))

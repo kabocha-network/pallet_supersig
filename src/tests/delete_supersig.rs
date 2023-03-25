@@ -77,7 +77,7 @@ fn delete_supersig_with_call() {
 			supersig_account.clone(),
 			amount
 		));
-		assert_ok!(Supersig::submit_call(
+		assert_ok!(Supersig::propose_call(
 			RawOrigin::Signed(BOB()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())
@@ -180,7 +180,7 @@ fn cannot_liquidate_supersig() {
 			keep_alive: false,
 		};
 
-		assert_ok!(Supersig::submit_call(
+		assert_ok!(Supersig::propose_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())

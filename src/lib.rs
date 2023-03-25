@@ -1,5 +1,12 @@
 //! # Supersig Pallet
 //!
+//! This pallet provides functionality for creating and managing supersigs, which is designed to be 
+//! more flexible than multisig, but with some trade-offs. 
+//! 
+//! A supersig allow a group of members to collectively make decisions on behalf of an on-chain entity. Each member is assigned
+//! a role, either "Master" or "Standard", which determines their voting power in the decision-making
+//! process.
+//!
 //! The supersig pallet extends the capabilities of a multisig so it can be fit for governance of
 //! larger funds. It is a superset of the multisig pallet, adding multiple functionalities and
 //! options to the original multi-signature dispatch allowing multiple signed origins (accounts) to
@@ -30,9 +37,9 @@
 //!   /!!\ note of caution /!!\ the creator of the supersig will NOT be added by default, he will
 //!   have to pass his adress into the list of added users.
 //!
-//! - `submit_call` - make a proposal on the specified supersig. an amount corresponding to the
+//! - `propose_call` - make a proposal on the specified supersig. an amount corresponding to the
 //!   length of the encoded call will be reserved. You need to wrap this around another call such as
-//!   sending balance. Anything that requires a vote needs to be wrapped in a submitCall.
+//!   sending balance. Anything that requires a vote needs to be wrapped in a proposeCall.
 //!
 //! - `approve_call` - give a positive vote to a call. if the number of vote >= SimpleMajority, the
 //!   call is executed. An user can only approve a call once.
@@ -195,8 +202,8 @@ pub mod pallet {
 		MembersAdded(T::AccountId, Vec<(T::AccountId, Role)>),
 		/// the list of users removed from the supersig [supersig, removed_users]
 		MembersRemoved(T::AccountId, Vec<T::AccountId>),
-		/// a member leaved the supersig [supersig, member]
-		SupersigLeaved(T::AccountId, T::AccountId),
+		/// a member left the supersig [supersig, member]
+		SupersigLeft(T::AccountId, T::AccountId),
 	}
 
 	#[pallet::error]
@@ -229,11 +236,21 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// create a supersig.
+		/// Create a supersig.
+		/// Create a new supersig with the caller as the initial master member.
+		///
+		/// The created supersig will have a unique account ID, derived from the pallet ID and an
+		/// incrementing nonce. The caller will be assigned the "Master" role, allowing them to add or remove
+		/// members and manage the supersig's extrinsic calls.
+		///
+		/// A deposit is required to create a supersig, which will be reserved from the caller's account.
+		/// This deposit acts as a security measure to prevent spam and abuse of the network. The deposit can
+		/// be partially or fully returned when members are removed or the supersig is deleted.
+		///
 		///
 		/// `create_supersig` will create a supersig with specified parameters, and transfer
 		/// currencies from the creator to the generated supersig:
-		///     - the existencial deposit (minimum amount to make an account alive)
+		///     - the existential deposit (minimum amount to make an account alive)
 		///     - the price corresponding to the size (in bytes) of the members times the
 		///       DepositPerByte
 		///
@@ -293,10 +310,23 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// To create a proposal use submitCall. You need to wrap a submit call around all calls
+		/// Propose Call
+		///
+		/// Propose a new extrinsic call to be executed by the supersig.
+		///
+		/// Any member of the supersig can propose a call. The proposal will be open for voting by other
+		/// supersig members, and the execution of the call is subject to the approval threshold.
+		///
+		/// The call to be executed is provided as a pre-image, which will be stored on-chain for the 
+		/// during of the voting process. A deposit is required to propose a call, which will be reserved 
+		/// from the proposer's account. This deposit serves as a security measure to prevent spam and abuse 
+		/// of the network. The deposit can be partially or fully returned when the call is executed or removed.
+		///
+		///
+		/// To create a proposal use proposeCall. You need to wrap a submit call around all calls
 		/// that require a vote.
 		///
-		/// `submit_call` will create a proposal on the supersig, that members can approve.
+		/// `propose_call` will create a proposal on the supersig, that members can approve.
 		/// this will lock an amount that depend on the lenght of the encoded call, to prevent spam
 		///
 		/// The dispatch origin for this call must be `Signed`, and the origin must be a
@@ -307,8 +337,8 @@ pub mod pallet {
 		/// Related functions:
 		/// - `Currency::reserve` will be called once to lock the deposit amount
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::submit_call(call.encode().len() as u32))]
-		pub fn submit_call(
+		#[pallet::weight(T::WeightInfo::propose_call(call.encode().len() as u32))]
+		pub fn propose_call(
 			origin: OriginFor<T>,
 			supersig_account: T::AccountId,
 			call: Box<<T as pallet::Config>::Call>,
@@ -338,7 +368,17 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// vote for a call in the supersig. You do not need to wrap this call in a submit call.
+		/// Approve Call (Vote)
+		/// Cast a vote for a proposed extrinsic call.
+		///
+		/// Any member of the supersig can cast their vote on a proposed call. The voting power of each
+		/// member depends on their assigned role, with "Master" members having more influence than
+		/// "Standard" members.
+		///
+		/// Once the total voting power in favor of a proposal reaches or exceeds the approval threshold,
+		/// the call will be scheduled for execution.
+		///
+		/// To vote for a call in the supersig. You do not need to wrap this call in a submit call.
 		///
 		/// `approve_call` will add a positive, unique vote to the specified call proposal.
 		/// if the numbers of votes on this proposal = SimpleMajority (51%), then the call is
@@ -447,7 +487,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// add members the supersig. You need to wrap this in a submitCall function.
+		/// add members the supersig. You need to wrap this in a proposeCall function.
 		///
 		/// `add members` will add a list of addesses to the members list of the supersig.
 		/// if an address is already present, it will be ignored.
@@ -564,7 +604,16 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// leave a supersig, unless you are the only member, in which case you need to
+		/// Leave a supersig.
+		///
+		/// A member can leave a supersig at any time by calling this function. The member's voting power
+		/// will be removed from the supersig, and their proportional share of the deposit will be
+		/// unreserved.
+		///
+		/// Note that the votes the member made before leaving will remain in storage and continue to
+		/// contribute to the approval status of the relevant proposals.
+		/// 
+		/// Yu can leave a supersig, unless you are the only member, in which case you need to
 		/// deleteSupersig.
 		///
 		/// `leave_supersig` will remove caller from selected supersig
@@ -596,7 +645,7 @@ pub mod pallet {
 				1,
 			)?;
 
-			// A supersig should at least have one member
+			// A supersig should have at least one member
 			TotalMembers::<T>::try_mutate(supersig_id, |nb| {
 				if *nb == 1 {
 					return Err(Error::<T>::MustHaveAtLeastOneMember)
@@ -611,7 +660,7 @@ pub mod pallet {
 			// Release a proportional amount of deposit
 			Self::unreserve_and_record_deposit(supersig_id, &supersig_account, amount_to_unreserve);
 
-			Self::deposit_event(Event::<T>::SupersigLeaved(supersig_account, who));
+			Self::deposit_event(Event::<T>::SupersigLeft(supersig_account, who));
 
 			Ok(())
 		}
@@ -709,7 +758,7 @@ pub mod pallet {
 			Ok(<BalanceOf<T>>::from(bytes_stored).saturating_mul(T::DepositPerByte::get()))
 		}
 
-		// this function can fail after a storage mutation.
+		// This function can fail after a storage mutation.
 		// extrinsics that use it should have the #[transactional] annotation.
 		fn reserve_and_record_deposit(
 			supersig_id: SupersigId,

@@ -28,7 +28,7 @@ fn leave_supersig() {
 
 		assert_eq!(
 			last_event(),
-			RuntimeEvent::Supersig(crate::Event::SupersigLeaved(supersig_account, ALICE()))
+			RuntimeEvent::Supersig(crate::Event::SupersigLeft(supersig_account, ALICE()))
 		);
 	})
 }
