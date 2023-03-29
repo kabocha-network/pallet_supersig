@@ -19,10 +19,10 @@
 //!
 //! The Supersig pallet provide function for:
 //!
-//! - Creating a supersig
+//! - Creating a supersig organisation
 //! - Adding and removing members
 //! - Leaving the supersig
-//! - Submit transaction to a supersig
+//! - Submit a proposal to execute a transaction
 //! - Vote for the transaction
 //! - Remove a pending transaction
 //! - Delete a supersig
@@ -30,33 +30,32 @@
 //!
 //! ### Dispatchable Functions
 //!
-//! - `create_supersig` - create a supersig, with specified members. The creator will have to
+//! - `create_supersig` - Create a supersig, with specified members. The creator will have to
 //!   deposit an existencial balance and a deposit that depend on the number of members, in the
 //!   supersig account. This last amount will be reserved on the supersig
 //!
-//!   /!!\ note of caution /!!\ the creator of the supersig will NOT be added by default, he will
-//!   have to pass his adress into the list of added users.
+//!   /!!\ Reminder /!!\ the creator of the supersig will NOT be added by default, he will
+//!   have to pass his address into the list of added users.
 //!
-//! - `propose_call` - make a proposal on the specified supersig. an amount corresponding to the
-//!   length of the encoded call will be reserved. You need to wrap this around another call such as
-//!   sending balance. Anything that requires a vote needs to be wrapped in a proposeCall.
+//! - `propose_call` - Submit a proposal for the supersig to execute a transaction, which is an amount corresponding to the
+//!   length of the encoded call will be reserved. The call wraps around the extrinsic which the user is proposing to execute.
+//!    (Anything that requires a vote needs to be wrapped in a proposeCall function.)
 //!
-//! - `approve_call` - give a positive vote to a call. if the number of vote >= SimpleMajority, the
-//!   call is executed. An user can only approve a call once.
+//! - `approve_call` - Vote for the call to be execute. The threshold is enumerated to vote >= SimpleMajority, the
+//!   call is executed. A user can only approve a call once.
 //!
-//! - `remove_call` - remove a call from the poll. The reserved amount of the proposer will be
-//!   unreserved
+//! - `remove_call` - Remove a call from the poll. The reserved amount of the proposer will be unreserved.
 //!
-//! - `add_members` - add new members to the supersig. In case some user are already in the
+//! - `add_members` - Add new members to the supersig organisation. In case some user are already in the
 //!   supersig, they will be ignored.
 //!
-//! - `remove_members` - remove members from the supersig. In case some user are not in the
-//!   supersig, they will be ignored.
+//! - `remove_members` - Remove members from the supersig. 
 //!
-//! - `delete_supersig` - remove the supersig and all the associated data. Funds will be unreserved
+//! - `delete_supersig` - Remove the supersig and all the associated data. Funds will be unreserved
 //!   and transfered to specified beneficiary.
 //!
-//! - `leave_supersig` - remove the caller from the supersig.
+//! - `leave_supersig` - Elect to leave the supersig. You cannot leave if you are the last member, instead you would
+//!    need to `delete_supersig`
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -112,17 +111,18 @@ pub mod pallet {
 			+ Dispatchable<RuntimeOrigin = Self::RuntimeOrigin, PostInfo = PostDispatchInfo>
 			+ GetDispatchInfo
 			+ From<frame_system::Call<Self>>;
-
 		/// The amount of balance that must be deposited per bytes stored
 		#[pallet::constant]
 		type DepositPerByte: Get<BalanceOf<Self>>;
-
 		/// The maximum number of account that can added or removed in a single call
 		#[pallet::constant]
 		type MaxAccountsPerTransaction: Get<u32>;
-
 		/// Weigths module
 		type WeightInfo: WeightInfo;
+		/// The length of time of the voting of a proposal
+		type MaxProposalLifetime: Get<Self::BlockNumber>;
+
+
 	}
 
 	#[pallet::pallet]
@@ -411,7 +411,7 @@ pub mod pallet {
 			// Different roles have different voting weight
 			let vote_weight = Self::compute_vote_weight(supersig_id, &who)?;
 
-			// Update storages with the user vote
+			// Update storage with the user vote
 			MembersVotes::<T>::insert((supersig_id, call_id, who.clone()), true);
 			Votes::<T>::mutate(supersig_id, call_id, |val| {
 				*val = val.saturating_add(vote_weight)
