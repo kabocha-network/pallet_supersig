@@ -105,3 +105,31 @@ fn submit_supersig_doesnt_exist() {
 		);
 	})
 }
+#[test]
+fn propose_call_data_too_large() {
+    ExtBuilder::default().balances(vec![]).build().execute_with(|| {
+		assert_ok!(Supersig::create_supersig(
+			RawOrigin::Signed(ALICE()).into(),
+			vec! {
+				(ALICE(), Role::Standard),
+				(BOB(), Role::Standard),
+				(CHARLIE(), Role::Standard),
+			}
+			.try_into()
+			.unwrap()
+		));
+		let supersig_account = get_supersig_account(0);
+        // Generate a call with data that exceeds the MaxCallDataSize
+        let large_data: Vec<u8> = vec![0; 2000];
+        let call: RuntimeCall = frame_system::Call::remark { remark: large_data.into() }.into();
+
+        assert_noop!(
+            Supersig::propose_call(
+                RawOrigin::Signed(ALICE()).into(),
+                supersig_account.clone(),
+                Box::new(call)
+            ),
+            Error::<Test>::CallDataTooLarge
+        );
+    });
+}

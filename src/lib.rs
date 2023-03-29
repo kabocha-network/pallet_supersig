@@ -119,8 +119,9 @@ pub mod pallet {
 		type MaxAccountsPerTransaction: Get<u32>;
 		/// Weigths module
 		type WeightInfo: WeightInfo;
-		/// The length of time of the voting of a proposal
-		type MaxProposalLifetime: Get<Self::BlockNumber>;
+		/// The maximum size of call data allowed (in bytes).
+		#[pallet::constant]
+		type MaxCallDataSize: Get<u32>;
 
 
 	}
@@ -232,6 +233,8 @@ pub mod pallet {
 		InvalidNonce,
 		/// the tx failed after execution attempt
 		TxFailed,
+		/// The call data size exceeds the maximum allowed limit.
+		CallDataTooLarge,
 	}
 
 	#[pallet::call]
@@ -347,6 +350,11 @@ pub mod pallet {
 			let supersig_id = Self::get_supersig_id_from_account(&supersig_account)?;
 
 			let data = call.encode();
+
+			ensure!(
+				data.len() <= T::MaxCallDataSize::get() as usize,
+				Error::<T>::CallDataTooLarge
+			);
 
 			// Incentive to remove proposal that won't be accepted
 			let deposit = Self::compute_deposit(data.len())?;
