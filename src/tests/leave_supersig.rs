@@ -48,7 +48,10 @@ fn leave_supersig_not_a_member() {
 		let supersig_account = get_supersig_account(0);
 
 		assert_noop!(
-			Supersig::leave_supersig(RawOrigin::Signed(CHARLIE()).into(), supersig_account),
+			Supersig::leave_supersig(RawOrigin::Signed(
+				CHARLIE()).into(), 
+				supersig_account
+			),
 			Error::<Test>::NotMember
 		);
 	})

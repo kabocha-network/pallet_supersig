@@ -122,6 +122,9 @@ pub mod pallet {
 		/// The maximum size of call data allowed (in bytes).
 		#[pallet::constant]
 		type MaxCallDataSize: Get<u32>;
+		/// The maximum amount of live proposals there can be per supersig.
+		#[pallet::constant]
+		type MaxCallsPerAccount: Get<u32>;
 
 
 	}
@@ -182,6 +185,10 @@ pub mod pallet {
 		bool,
 		ValueQuery,
 	>;
+	#[pallet::storage]
+	#[pallet::getter(fn active_proposals)]
+	pub type ActiveProposals<T: Config> = StorageMap<_, Twox64Concat, SupersigId, u32, ValueQuery>;
+	
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -235,6 +242,8 @@ pub mod pallet {
 		TxFailed,
 		/// The call data size exceeds the maximum allowed limit.
 		CallDataTooLarge,
+		/// Too many active proposals for the given supersig. Proposal voting needs to be completed before another can be proposed. 
+		TooManyActiveProposals,
 	}
 
 	#[pallet::call]
@@ -356,6 +365,12 @@ pub mod pallet {
 				Error::<T>::CallDataTooLarge
 			);
 
+			// Modify the propose_call extrinsic to check the number of active proposals before allowing a new one
+			let current_active_proposals = Self::active_proposals(supersig_id);
+    		ensure!(current_active_proposals <= T::MaxCallsPerAccount::get(), Error::<T>::TooManyActiveProposals);
+			// Increment the number of active proposals for the Supersig account when a new proposal is submitted
+			ActiveProposals::<T>::mutate(supersig_id, |active_proposals| *active_proposals += 1);
+
 			// Incentive to remove proposal that won't be accepted
 			let deposit = Self::compute_deposit(data.len())?;
 			T::Currency::reserve(&who, deposit)?;
@@ -424,6 +439,7 @@ pub mod pallet {
 			Votes::<T>::mutate(supersig_id, call_id, |val| {
 				*val = val.saturating_add(vote_weight)
 			});
+			
 
 			Self::deposit_event(Event::<T>::CallVoted(
 				supersig_account.clone(),
@@ -437,6 +453,9 @@ pub mod pallet {
 					// free storage and unreserve deposit
 					Self::unchecked_remove_call_from_storages(supersig_id, call_id);
 					T::Currency::unreserve(&preimage.provider, preimage.deposit);
+
+					// Decrement the number of active proposals when the proposal is approved or rejected, freeing up space for a new live proposal. 
+					ActiveProposals::<T>::mutate(supersig_id, |active_proposals| *active_proposals = active_proposals.saturating_sub(1));
 
 					// Try to decode and execute the call
 					let res = if let Ok(call) = <T as Config>::Call::decode(&mut &preimage.data[..])
@@ -489,6 +508,10 @@ pub mod pallet {
 			// Clean up storage and release reserved funds
 			Self::unchecked_remove_call_from_storages(supersig_id, call_id);
 			T::Currency::unreserve(&preimage.provider, preimage.deposit);
+
+			// Decrement the number of active proposals when the call is removed, freeing up space for a new live proposal call. 
+			ActiveProposals::<T>::mutate(supersig_id, |active_proposals| *active_proposals = active_proposals.saturating_sub(1));
+
 
 			Self::deposit_event(Event::<T>::CallRemoved(supersig_account, call_id));
 
