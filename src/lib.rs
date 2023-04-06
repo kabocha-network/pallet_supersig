@@ -367,7 +367,9 @@ pub mod pallet {
 
 			// Modify the propose_call extrinsic to check the number of active proposals before allowing a new one
 			let current_active_proposals = Self::active_proposals(supersig_id);
-    		ensure!(current_active_proposals <= T::MaxCallsPerAccount::get(), Error::<T>::TooManyActiveProposals);
+    		ensure!(
+				current_active_proposals < T::MaxCallsPerAccount::get(), Error::<T>::TooManyActiveProposals);
+			
 			// Increment the number of active proposals for the Supersig account when a new proposal is submitted
 			ActiveProposals::<T>::mutate(supersig_id, |active_proposals| *active_proposals += 1);
 

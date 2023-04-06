@@ -155,7 +155,7 @@ fn test_live_proposals_limit() {
 			
 
 			// create 3 proposals if the max is 3
-			for i in 1..3 {
+			for i in 1..=3 {
 				// let call = pallet_balances::Call::transfer {
 				// 	dest: ALICE(),
 				// 	value: 1000,
@@ -169,23 +169,9 @@ fn test_live_proposals_limit() {
 					RawOrigin::Signed(ALICE()).into(),
 					supersig_account.clone(),
 					Box::new(call.clone())
-				);
-				assert_ok!(
-					Supersig::propose_call(
-						RawOrigin::Signed(ALICE()).into(),
-						supersig_account.clone(),
-						Box::new(call.clone()),
-				));
-				// 
-				
-				// vote for the proposal from Alice
-				assert_ok!(Supersig::approve_call(
-					RawOrigin::Signed(ALICE()).into(),
-					supersig_account.clone(),
-					(i as u64).into(),
-				));
+				); 
 			};
-			// should not be able to create a sixth proposal
+			// should not be able to create a fourth proposal
 			let call: RuntimeCall = frame_system::Call::remark {
 				remark: "test".into(),
 			}	
