@@ -1,6 +1,6 @@
 [package]
 name = "pallet-supersig-rpc"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Timothée Delabrouille <https://github.com/tdelabro>"]
 edition = "2021"
 license = "Apache-2.0"
