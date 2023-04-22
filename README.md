@@ -4,7 +4,7 @@
 
 </h1>
 
-_Funded by Web3 foundation and Edgeware_
+_Key Contributor: Rusty Crewmates; Funded by Web3 foundation and Edgeware._
 <h2 align="center">
 <a href="https://decentration.org"> <img img src="./assets/contributors.png" alt="Rusty Crewmates" margin="10px" width="200"></a>
 
