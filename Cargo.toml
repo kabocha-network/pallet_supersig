@@ -1,11 +1,11 @@
 [package]
 name = "pallet-supersig"
-authors = ["Nathan GD <https://github.com/gdnathan>"]
+authors = ["Nathan GD <https://github.com/gdnathan>, Ramsey Ajram <https://github.com/decentration>"]
 description = "Pallet Supersig like multisig but with superpowers! Credit goes to Nathan GD for building, Timothee Delabro for supervising; Web3 Foundation and Edgeware for supporting, and Decentration as project and product design/management."
-version = "1.1.0"
+version = "1.1.1"
 license = "Unlicense"
-homepage = "https://substrate.io"
-repository = "https://github.com/paritytech/substrate/"
+homepage = "https://decentration.org"
+repository = "https://github.com/decentration/pallet_supersig/"
 edition = "2021"
 
 [package.metadata.docs.rs]
@@ -18,24 +18,26 @@ serde = { version = "1.0.132", default-features = false, features = [
 codec = { package = "parity-scale-codec", version = "3.0.0", features = [
 	"derive",
 ], default-features = false }
-scale-info = { version = "2.1.1", default-features = false, features = [
+scale-info = { version = "2.2.0", default-features = false, features = [
 	"derive",
 ] }
 
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "polkadot-v0.9.24" }
-frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
-frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
-sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
-sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", default-features = false, optional = true, branch = "master" }
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
+frame-system = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
+sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
+sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
 
 [dev-dependencies]
-sp-io = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+sp-io = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
 
 [features]
-default = ["std", "runtime-benchmarks"]
-runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
+default = ["std"
+#, "runtime-benchmarks"
+]
+# runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 std = [
 	"serde",
 	"codec/std",
@@ -46,6 +48,12 @@ std = [
 	"pallet-balances/std",
 	"frame-support/std",
 	"frame-system/std",
-	"frame-benchmarking/std",
+	"frame-benchmarking?/std",
+]
+
+runtime-benchmarks = [
+	"frame-benchmarking/runtime-benchmarks",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
 ]
 try-runtime = ["frame-support/try-runtime"]

@@ -1,6 +1,7 @@
 use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok, BoundedVec};
+use frame_system::RawOrigin;
 pub use sp_std::{boxed::Box, cmp::min, mem::size_of};
 
 #[test]
@@ -14,7 +15,7 @@ fn create_supersig() {
 		.try_into()
 		.unwrap();
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			members.clone(),
 		));
 
@@ -36,14 +37,14 @@ fn create_supersig() {
 		let mut events = frame_system::Pallet::<Test>::events();
 		assert_eq!(
 			events.pop().expect("expect event").event,
-			Event::Supersig(crate::Event::MembersAdded(
+			RuntimeEvent::Supersig(crate::Event::MembersAdded(
 				get_supersig_account(0),
 				members.into()
 			))
 		);
 		assert_eq!(
 			events.pop().expect("expect event").event,
-			Event::Supersig(crate::Event::SupersigCreated(get_supersig_account(0)))
+			RuntimeEvent::Supersig(crate::Event::SupersigCreated(get_supersig_account(0)))
 		);
 	});
 }
@@ -59,7 +60,7 @@ fn create_supersig_with_master() {
 		.try_into()
 		.unwrap();
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			members.clone(),
 		));
 
@@ -81,14 +82,14 @@ fn create_supersig_with_master() {
 		let mut events = frame_system::Pallet::<Test>::events();
 		assert_eq!(
 			events.pop().expect("expect event").event,
-			Event::Supersig(crate::Event::MembersAdded(
+			RuntimeEvent::Supersig(crate::Event::MembersAdded(
 				get_supersig_account(0),
 				members.into()
 			))
 		);
 		assert_eq!(
 			events.pop().expect("expect event").event,
-			Event::Supersig(crate::Event::SupersigCreated(get_supersig_account(0)))
+			RuntimeEvent::Supersig(crate::Event::SupersigCreated(get_supersig_account(0)))
 		);
 	});
 }
@@ -104,14 +105,25 @@ fn create_multiple_supersig() {
 		.try_into()
 		.unwrap();
 		let members2 = vec![(ALICE(), Role::Standard), (BOB(), Role::Master)].try_into().unwrap();
-		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), members,));
-		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), members2,));
+		assert_ok!(Supersig::create_supersig(
+			RawOrigin::Signed(ALICE()).into(),
+			members,
+		));
+		assert_ok!(Supersig::create_supersig(
+			RawOrigin::Signed(ALICE()).into(),
+			members2,
+		));
 
 		assert_eq!(Supersig::nonce_supersig(), 2);
 
 		assert_eq!(Balances::free_balance(get_supersig_account(0)), 0u64);
 		assert_eq!(Balances::free_balance(get_supersig_account(1)), 0u64);
-		Balances::transfer(Origin::signed(ALICE()), get_supersig_account(1), 10_000).unwrap();
+		Balances::transfer(
+			RawOrigin::Signed(ALICE()).into(),
+			get_supersig_account(1),
+			10_000,
+		)
+		.unwrap();
 
 		assert_eq!(Balances::free_balance(get_supersig_account(0)), 0u64);
 		assert_eq!(Balances::free_balance(get_supersig_account(1)), 10_000);
@@ -132,8 +144,11 @@ fn create_multiple_supersig() {
 fn create_with_empty_list() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_noop!(
-			Supersig::create_supersig(Origin::signed(ALICE()), vec!().try_into().unwrap()),
-			Error::<Test>::InvalidNumberOfMembers
+			Supersig::create_supersig(
+				RawOrigin::Signed(ALICE()).into(),
+				vec!().try_into().unwrap()
+			),
+			Error::<Test>::MustHaveAtLeastOneMember
 		);
 	});
 }

@@ -1,22 +1,26 @@
 use super::{helper::*, mock::*};
 use crate::{Config as SuperConfig, Error, Role};
 use frame_support::{assert_noop, assert_ok, BoundedVec};
+use frame_system::RawOrigin;
 pub use sp_std::{boxed::Box, mem::size_of};
 
 #[test]
 fn add_members() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		let members = vec![(ALICE(), Role::Standard), (BOB(), Role::Standard)].try_into().unwrap();
-		assert_ok!(Supersig::create_supersig(Origin::signed(ALICE()), members,));
+		assert_ok!(Supersig::create_supersig(
+			RawOrigin::Signed(ALICE()).into(),
+			members,
+		));
 
 		let supersig_account = get_supersig_account(0);
 		assert_ok!(Balances::transfer(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			100_000
 		));
 		assert_ok!(Supersig::add_members(
-			Origin::signed(supersig_account.clone()),
+			RawOrigin::Signed(supersig_account.clone()).into(),
 			vec!((BOB(), Role::Master), (CHARLIE(), Role::Standard)).try_into().unwrap()
 		));
 
@@ -31,7 +35,7 @@ fn add_members() {
 		assert_eq!(Balances::reserved_balance(get_supersig_account(0)), deposit);
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::MembersAdded(
+			RuntimeEvent::Supersig(crate::Event::MembersAdded(
 				supersig_account,
 				vec!((CHARLIE(), Role::Standard))
 			))
@@ -45,11 +49,11 @@ fn add_users_not_allowed() {
 		let members: BoundedVec<_, _> =
 			vec![(ALICE(), Role::Standard), (BOB(), Role::Standard)].try_into().unwrap();
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			members.clone()
 		));
 		assert_noop!(
-			Supersig::add_members(Origin::signed(ALICE()), members),
+			Supersig::add_members(RawOrigin::Signed(ALICE()).into(), members),
 			Error::<Test>::NotSupersig
 		);
 	})
@@ -61,12 +65,12 @@ fn add_users_unknown_supersig() {
 		let members: BoundedVec<_, _> =
 			vec![(ALICE(), Role::Standard), (BOB(), Role::Standard)].try_into().unwrap();
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			members.clone()
 		));
 		let bad_supersig_account = get_supersig_account(1);
 		assert_noop!(
-			Supersig::add_members(Origin::signed(bad_supersig_account), members),
+			Supersig::add_members(RawOrigin::Signed(bad_supersig_account).into(), members),
 			Error::<Test>::NotSupersig
 		);
 	})

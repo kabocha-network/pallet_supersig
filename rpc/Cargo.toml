@@ -1,6 +1,6 @@
 [package]
 name = "pallet-supersig-rpc"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Timothée Delabrouille <https://github.com/tdelabro>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -10,16 +10,15 @@ license = "Apache-2.0"
 codec = { package = "parity-scale-codec", version = "3.0.0", features = [
 	"derive",
 ], default-features = false }
-scale-info = { version = "2.1.1", default-features = false, features = [
+scale-info = { version = "2.3.1", default-features = false, features = [
 	"derive",
 ] }
 
-jsonrpsee = { version = "0.15.1", features = ["server", "macros"] }
+jsonrpsee = { version = "0.16.2", features = ["client-core", "server", "macros"] }
 
-
-sp-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
-sp-std = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
-sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.24" }
+sp-api = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
+sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
+sp-blockchain = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
 
 pallet-supersig = { path = ".." }
 pallet-supersig-rpc-runtime-api = { path = "./runtime-api" }

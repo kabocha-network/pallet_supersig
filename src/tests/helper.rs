@@ -5,6 +5,6 @@ pub fn get_supersig_account(index: u64) -> <Test as frame_system::Config>::Accou
 	SupersigPalletId::get().into_sub_account_truncating(index)
 }
 
-pub fn last_event() -> Event {
+pub fn last_event() -> RuntimeEvent {
 	frame_system::Pallet::<Test>::events().pop().expect("Event expected").event
 }

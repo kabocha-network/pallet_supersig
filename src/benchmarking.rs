@@ -5,7 +5,7 @@ use super::*;
 
 use crate::Pallet;
 use frame_benchmarking::{account as benchmark_account, benchmarks};
-use frame_support::{assert_ok, storage::bounded_vec::*, traits::Get};
+use frame_support::{assert_ok, storage::bounded_vec::*, traits::Get, PalletId};
 use frame_system::RawOrigin;
 use sp_std::vec;
 
@@ -16,29 +16,26 @@ pub fn get_account<T: Config>(name: &'static str) -> T::AccountId {
 
 benchmarks! {
 	create_supersig {
-		let z in 0 .. 10;
+		let z in 0 .. T::MaxAccountsPerTransaction::get() - 1;
 
 		let alice: T::AccountId = get_account::<T>("ALICE");
-		let bob: T::AccountId = get_account::<T>("BOB");
-		let charlie: T::AccountId = get_account::<T>("CHARLIE");
 		let val: BalanceOf<T> = 4_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
-		let mut members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
+		let mut members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard)}.try_into().unwrap();
 		let oui = "oui";
 		for i in 0 .. z {
 			let acc = benchmark_account(oui, i, 0);
 			members.try_push((acc, Role::Standard)).unwrap();
 		}
-
-
 	}: _(RawOrigin::Signed(alice.clone()), members.clone())
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
 	}
-	submit_call {
-		let z in 0 .. 10_000;
-		let call: <T as Config>::Call = frame_system::Call::<T>::remark {
+
+	propose_call {
+		let z in 0 .. 100_000;
+		let call = frame_system::Call::remark {
 			remark: vec![0; z as usize]
 		}.into();
 
@@ -47,6 +44,7 @@ benchmarks! {
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
 		let val: BalanceOf<T> = 4_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
+
 
 		let supersig_id = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		let members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
@@ -60,8 +58,9 @@ benchmarks! {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
 		assert_eq!(Pallet::<T>::nonce_call(0), 1);
 	}
+
 	approve_call {
-		let call: <T as Config>::Call = frame_system::Call::<T>::remark {
+		let call = frame_system::Call::remark {
 			remark: vec![0; 0]
 		}.into();
 
@@ -80,16 +79,17 @@ benchmarks! {
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
 			members)
 		);
-		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice).into(), supersig_id.clone(), Box::new(call)));
+		assert_ok!(Pallet::<T>::propose_call(RawOrigin::Signed(alice).into(), supersig_id.clone(), Box::new(call)));
+
 	}: _(RawOrigin::Signed(bob.clone()), supersig_id, 0)
 	verify {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
 		assert_eq!(Pallet::<T>::nonce_call(0), 1);
-		assert_eq!(Pallet::<T>::votes(0, 0), 0);
+		assert_eq!(Pallet::<T>::votes(0, 0), 1);
 	}
 
 	remove_call {
-		let call: <T as Config>::Call = frame_system::Call::<T>::remark {
+		let call = frame_system::Call::remark {
 			remark: vec![0; 0]
 		}.into();
 
@@ -107,7 +107,7 @@ benchmarks! {
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
 			members)
 		);
-		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
+		assert_ok!(Pallet::<T>::propose_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
 		assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), 0));
 	}: _(RawOrigin::Signed(alice.clone()), supersig_id, 0)
 	verify {
@@ -117,55 +117,57 @@ benchmarks! {
 	}
 
 	add_members {
-		let z in 0 .. 10;
+		let z in 0 .. T::MaxAccountsPerTransaction::get();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
 		let val: BalanceOf<T> = 4_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
-		let mut members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
-		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice).into(), members.clone()));
+		let initial_members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
+		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice).into(), initial_members.clone()));
 
+		let mut new_members: BoundedVec<_, _> = Vec::new().try_into().unwrap();
 		let oui = "oui";
 		for i in 0 .. z {
 			let acc = benchmark_account(oui, i, 0);
-			members.try_push((acc, Role::Standard)).unwrap();
+			new_members.try_push((acc, Role::Standard)).unwrap();
 		}
 		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		T::Currency::make_free_balance_be(&supersig_id, val.saturating_mul(4_000_000_000u32.into()));
 
-	}: _(RawOrigin::Signed(supersig_id.clone()), members.clone())
+	}: _(RawOrigin::Signed(supersig_id.clone()), new_members.clone())
 	verify {
 		assert_eq!(Pallet::<T>::total_members(0), 3 + z);
 	}
+
 	remove_members {
-		let z in 0 .. 10;
+		let z in 0 .. T::MaxAccountsPerTransaction::get();
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");
 		let charlie: T::AccountId = get_account::<T>("CHARLIE");
 		let val: BalanceOf<T> = 4_000_000_000u32.into();
 		T::Currency::make_free_balance_be(&alice, val.saturating_mul(4_000_000_000u32.into()));
 
-		let mut members_and_roles: BoundedVec<_, _> = sp_std::vec!{(alice.clone(), Role::Standard), (bob.clone(), Role::Standard), (charlie.clone(), Role::Standard)}.try_into().unwrap();
-		let mut members: BoundedVec<_, _> = Vec::new().try_into().unwrap();
-		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(), members_and_roles.clone()));
+		let initial_members: BoundedVec<_, _> = vec!{(alice.clone(), Role::Standard), (bob, Role::Standard), (charlie, Role::Standard)}.try_into().unwrap();
+		assert_ok!(Pallet::<T>::create_supersig(RawOrigin::Signed(alice).into(), initial_members.clone()));
+
+		let mut new_members: BoundedVec<_, _> = Vec::new().try_into().unwrap();
 		let oui = "oui";
 		for i in 0 .. z {
-			let acc: T::AccountId = benchmark_account(oui, i, 0);
-			members_and_roles.try_push((acc.clone(), Role::Standard)).unwrap();
-			members.try_push(acc).unwrap();
+			let acc = benchmark_account(oui, i, 0);
+			new_members.try_push((acc, Role::Standard)).unwrap();
 		}
 		let supersig_id: T::AccountId = <<T as Config>::PalletId as Get<PalletId>>::get().into_sub_account_truncating(0);
 		T::Currency::make_free_balance_be(&supersig_id, val.saturating_mul(4_000_000_000u32.into()));
+		assert_ok!(Pallet::<T>::add_members(RawOrigin::Signed(supersig_id.clone()).into(), new_members.clone()));
 
-		assert_ok!(Pallet::<T>::add_members(RawOrigin::Signed(supersig_id.clone()).into(), members_and_roles.clone()));
-	}: _(RawOrigin::Signed(supersig_id.clone()), members.clone())
+		let members_to_remove: BoundedVec<T::AccountId, _> = new_members.into_iter().map(|(a, r)| a).collect::<Vec<_>>().try_into().unwrap();
+	}: _(RawOrigin::Signed(supersig_id.clone()), members_to_remove.clone())
 	verify {
-		assert_eq!(Pallet::<T>::members(0, alice), Role::Standard);
-		assert_eq!(Pallet::<T>::members(0, bob), Role::Standard);
-		assert_eq!(Pallet::<T>::members(0, charlie), Role::Standard);
+		assert_eq!(Pallet::<T>::total_members(0), 3);
 	}
+
 	delete_supersig {
 		let alice: T::AccountId = get_account::<T>("ALICE");
 		let bob: T::AccountId = get_account::<T>("BOB");

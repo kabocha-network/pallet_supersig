@@ -1,13 +1,14 @@
 use super::{helper::*, mock::*};
 use crate::{Error, Role};
 use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
 pub use sp_std::boxed::Box;
 
 #[test]
 fn remove_call() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -18,17 +19,17 @@ fn remove_call() {
 		));
 		let supersig_account = get_supersig_account(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {
-			nothing: "test".into(),
-		});
-		assert_ok!(Supersig::submit_call(
-			Origin::signed(ALICE()),
+		let call = frame_system::Call::remark {
+			remark: "test".into(),
+		};
+		assert_ok!(Supersig::propose_call(
+			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
-			Box::new(call)
+			Box::new(call.into())
 		));
 		assert!(Supersig::calls(0, 0).is_some());
 		assert_ok!(Supersig::remove_call(
-			Origin::signed(supersig_account.clone()),
+			RawOrigin::Signed(supersig_account.clone()).into(),
 			supersig_account.clone(),
 			0
 		));
@@ -38,7 +39,7 @@ fn remove_call() {
 		assert!(!Supersig::members_votes((0, 0, BOB())));
 		assert_eq!(
 			last_event(),
-			Event::Supersig(crate::Event::CallRemoved(supersig_account, 0))
+			RuntimeEvent::Supersig(crate::Event::CallRemoved(supersig_account, 0))
 		);
 	})
 }
@@ -47,7 +48,7 @@ fn remove_call() {
 fn non_allowed_remove_call() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -58,16 +59,16 @@ fn non_allowed_remove_call() {
 		));
 		let supersig_account = get_supersig_account(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {
-			nothing: "test".into(),
-		});
-		assert_ok!(Supersig::submit_call(
-			Origin::signed(ALICE()),
+		let call = frame_system::Call::remark {
+			remark: "test".into(),
+		};
+		assert_ok!(Supersig::propose_call(
+			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
-			Box::new(call)
+			Box::new(call.into())
 		));
 		assert_noop!(
-			Supersig::remove_call(Origin::signed(BOB()), supersig_account, 0),
+			Supersig::remove_call(RawOrigin::Signed(BOB()).into(), supersig_account, 0),
 			Error::<Test>::NotAllowed
 		);
 	})
@@ -77,7 +78,7 @@ fn non_allowed_remove_call() {
 fn remove_unknown_call() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
-			Origin::signed(ALICE()),
+			RawOrigin::Signed(ALICE()).into(),
 			vec! {
 				(ALICE(), Role::Standard),
 				(BOB(), Role::Standard),
@@ -88,17 +89,17 @@ fn remove_unknown_call() {
 		));
 		let supersig_account = get_supersig_account(0);
 
-		let call = Call::Nothing(NoCall::do_nothing {
-			nothing: "test".into(),
-		});
-		assert_ok!(Supersig::submit_call(
-			Origin::signed(ALICE()),
+		let call = frame_system::Call::remark {
+			remark: "test".into(),
+		};
+		assert_ok!(Supersig::propose_call(
+			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
-			Box::new(call)
+			Box::new(call.into())
 		));
 		assert_noop!(
 			Supersig::remove_call(
-				Origin::signed(supersig_account.clone()),
+				RawOrigin::Signed(supersig_account.clone()).into(),
 				supersig_account,
 				1
 			),
