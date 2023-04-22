@@ -1,6 +1,6 @@
 <h1 align="center">
  
- <a href="https://decentration.org"> <img src=https://miro.medium.com/v2/resize:fit:720/format:webp/1*gv_B6BeR6GwwkHjfuv2RWg.png" alt="Supersig" width="500"></a>
+ <a href="https://decentration.org"> <img src="./supersig.jpg" alt="Supersig" width="500"></a>
 
 </h1>
 
@@ -8,7 +8,7 @@ _Funded by Web3 foundation and Edgeware_
 
 <a href="https://www.kabocha.network/">  <img src="https://avatars.githubusercontent.com/u/91527332?s=200&v=4" alt="Kabocha" width="200"></a>
 <a href="https://github.com/rusty-crewmates"> <img src="https://avatars.githubusercontent.com/u/99248789?s=200&v=4" alt="Rusty Crewmates" width="200"></a>
-<a href="https://web3.foundation"> <img src=https://images4.bamboohr.com/104723/logos/cropped.jpg?v=50" alt="W3F" width="200"></a>
+<a href="https://web3.foundation"> <img src="https://images4.bamboohr.com/104723/logos/cropped.jpg?v=50" alt="W3F" width="200"></a>
 
 
 
