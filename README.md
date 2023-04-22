@@ -6,10 +6,9 @@
 
 _Funded by Web3 foundation and Edgeware_
 
-<a href="https://www.kabocha.network/">  <img img src="./assets/kabocha.png" alt="Kabocha" width="200"></a>
-<a href="https://github.com/rusty-crewmates"> <img img src="./assets/rusty.png" alt="Rusty Crewmates" width="200"></a>
-<a href="https://web3.foundation"> <img img src="./assets/w3f.png" alt="W3F" width="200"></a>
-<a href="https://edgewa.re"> <img img src="./assets/edgeware.png" alt="Edgeware" width="200"></a>
+<a href="https://github.com/rusty-crewmates"> <img img src="./assets/rusty.png" alt="Rusty Crewmates" margin="10px" width="200"></a>
+<a href="https://web3.foundation"> <img img src="./assets/w3f.png" alt="W3F" margin="10px" width="200"></a>
+<a href="https://edgewa.re"> <img img src="./assets/edgeware.png" alt="Edgeware" margin="10px" width="200"></a>
 
 
 
