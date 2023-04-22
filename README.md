@@ -1,15 +1,15 @@
 <h1 align="center">
  
- <a href="https://decentration.org"> <img src="./supersig.jpg" alt="Supersig" width="500"></a>
+ <a href="https://decentration.org"> <img src="./assets/supersig.jpg" alt="Supersig" width="500"></a>
 
 </h1>
 
 _Funded by Web3 foundation and Edgeware_
 
-<a href="https://www.kabocha.network/">  <img src="https://avatars.githubusercontent.com/u/91527332?s=200&v=4" alt="Kabocha" width="200"></a>
-<a href="https://github.com/rusty-crewmates"> <img src="https://avatars.githubusercontent.com/u/99248789?s=200&v=4" alt="Rusty Crewmates" width="200"></a>
-<a href="https://web3.foundation"> <img src="https://avatars.githubusercontent.com/u/30405397?s=200&v=4" alt="W3F" width="200"></a>
-<a href="https://edgewa.re"> <img src="https://avatars.githubusercontent.com/u/74990659?s=200&v=4" alt="Edgeware" width="180"></a>
+<a href="https://www.kabocha.network/">  <img img src="./assets/kabocha.png" alt="Kabocha" width="200"></a>
+<a href="https://github.com/rusty-crewmates"> <img img src="./assets/rusty.png" alt="Rusty Crewmates" width="200"></a>
+<a href="https://web3.foundation"> <img img src="./assets/w3f.png" alt="W3F" width="200"></a>
+<a href="https://edgewa.re"> <img img src="./assets/edgeware.png" alt="Edgeware" width="200"></a>
 
 
 
