@@ -5,11 +5,10 @@
 </h1>
 
 _Funded by Web3 foundation and Edgeware_
+<h2 align="center">
+<a href="https://decentration.org"> <img img src="./assets/contributors.png" alt="Rusty Crewmates" margin="10px" width="200"></a>
 
-<a href="https://github.com/rusty-crewmates"> <img img src="./assets/rusty.png" alt="Rusty Crewmates" margin="10px" width="200"></a>
-<a href="https://web3.foundation"> <img img src="./assets/w3f.png" alt="W3F" margin="10px" width="200"></a>
-<a href="https://edgewa.re"> <img img src="./assets/edgeware.png" alt="Edgeware" margin="10px" width="200"></a>
-
+</h2>
 
 
 # Supersig Pallet
