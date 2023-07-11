@@ -85,13 +85,13 @@ fn get_proposals() {
 		}
 		.into();
 
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.clone())
 		));
 
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.clone())
@@ -145,7 +145,7 @@ fn get_proposal_state() {
 			Error::<Test>::CallNotFound
 		);
 
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.clone())

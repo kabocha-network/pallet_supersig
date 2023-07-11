@@ -33,7 +33,7 @@ benchmarks! {
 		assert_eq!(Pallet::<T>::nonce_supersig(), 1);
 	}
 
-	propose_call {
+	submit_call {
 		let z in 0 .. 100_000;
 		let call = frame_system::Call::remark {
 			remark: vec![0; z as usize]
@@ -79,7 +79,7 @@ benchmarks! {
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
 			members)
 		);
-		assert_ok!(Pallet::<T>::propose_call(RawOrigin::Signed(alice).into(), supersig_id.clone(), Box::new(call)));
+		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice).into(), supersig_id.clone(), Box::new(call)));
 
 	}: _(RawOrigin::Signed(bob.clone()), supersig_id, 0)
 	verify {
@@ -107,7 +107,7 @@ benchmarks! {
 			Pallet::<T>::create_supersig(RawOrigin::Signed(alice.clone()).into(),
 			members)
 		);
-		assert_ok!(Pallet::<T>::propose_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
+		assert_ok!(Pallet::<T>::submit_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), Box::new(call)));
 		assert_ok!(Pallet::<T>::approve_call(RawOrigin::Signed(alice.clone()).into(), supersig_id.clone(), 0));
 	}: _(RawOrigin::Signed(alice.clone()), supersig_id, 0)
 	verify {

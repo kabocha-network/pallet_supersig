@@ -39,7 +39,7 @@ The Supersig pallet provide function for:
   /!!\ note of caution /!!\ the creator of the supersig will NOT be added by default, he will
   have to pass his adress into the list of added users.
 
-- `propose_call` - make a proposal on the specified supersig. an amount corresponding to the
+- `submit_call` - make a proposal on the specified supersig. an amount corresponding to the
   length of the encoded call will be reserved.
 
 - `approve_call` - give a positive vote to a call. if the number of vote >= SimpleMajority, the

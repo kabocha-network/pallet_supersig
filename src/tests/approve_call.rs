@@ -27,7 +27,7 @@ fn approve_call() {
 		let call = frame_system::Call::remark {
 			remark: "test".into(),
 		};
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())
@@ -76,7 +76,7 @@ fn approve_call_until_threshold() {
 			value: 100_000,
 		};
 
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())
@@ -153,7 +153,7 @@ fn approve_call_as_master() {
 			value: 100_000,
 		};
 
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())
@@ -228,7 +228,7 @@ fn approve_failing_call_as_master() {
 			value: 10_000_000,
 		};
 
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())
@@ -284,7 +284,7 @@ fn approve_supersig_doesnt_exist() {
 		let call = frame_system::Call::remark {
 			remark: "test".into(),
 		};
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(CHARLIE()).into(),
 			supersig_account,
 			Box::new(call.into())
@@ -318,7 +318,7 @@ fn user_already_voted() {
 		let call = frame_system::Call::remark {
 			remark: "test".into(),
 		};
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(CHARLIE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())
@@ -352,7 +352,7 @@ fn approve_not_a_member() {
 		let call = frame_system::Call::remark {
 			remark: "test".into(),
 		};
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.into())

@@ -6,7 +6,7 @@ use frame_system::RawOrigin;
 pub use sp_std::boxed::Box;
 
 #[test]
-fn propose_calls() {
+fn submit_calls() {
 	ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			RawOrigin::Signed(ALICE()).into(),
@@ -33,7 +33,7 @@ fn propose_calls() {
 		}
 		.into();
 
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(ALICE()).into(),
 			supersig_account.clone(),
 			Box::new(call.clone())
@@ -50,7 +50,7 @@ fn propose_calls() {
 				ALICE()
 			))
 		);
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(BOB()).into(),
 			supersig_account.clone(),
 			Box::new(call1)
@@ -64,7 +64,7 @@ fn propose_calls() {
 				BOB()
 			))
 		);
-		assert_ok!(Supersig::propose_call(
+		assert_ok!(Supersig::submit_call(
 			RawOrigin::Signed(CHARLIE()).into(),
 			supersig_account.clone(),
 			Box::new(call2)
@@ -96,7 +96,7 @@ fn submit_supersig_doesnt_exist() {
 		}
 		.into();
 		assert_noop!(
-			Supersig::propose_call(
+			Supersig::submit_call(
 				RawOrigin::Signed(CHARLIE()).into(),
 				bad_supersig_account,
 				Box::new(call)
@@ -106,7 +106,7 @@ fn submit_supersig_doesnt_exist() {
 	})
 }
 #[test]
-fn propose_call_data_too_large() {
+fn submit_call_data_too_large() {
     ExtBuilder::default().balances(vec![]).build().execute_with(|| {
 		assert_ok!(Supersig::create_supersig(
 			RawOrigin::Signed(ALICE()).into(),
@@ -124,7 +124,7 @@ fn propose_call_data_too_large() {
         let call: RuntimeCall = frame_system::Call::remark { remark: large_data.into() }.into();
 
         assert_noop!(
-            Supersig::propose_call(
+            Supersig::submit_call(
                 RawOrigin::Signed(ALICE()).into(),
                 supersig_account.clone(),
                 Box::new(call)
@@ -165,7 +165,7 @@ fn test_live_proposals_limit() {
 					remark: "test".into(),
 				}
 				.into();
-				Supersig::propose_call(
+				Supersig::submit_call(
 					RawOrigin::Signed(ALICE()).into(),
 					supersig_account.clone(),
 					Box::new(call.clone())
@@ -177,7 +177,7 @@ fn test_live_proposals_limit() {
 			}	
 			.into();
 			assert_noop!(
-				Supersig::propose_call(
+				Supersig::submit_call(
 					RawOrigin::Signed(ALICE()).into(),
 					supersig_account.clone(),
 					Box::new(call.clone())
@@ -212,7 +212,7 @@ fn test_active_proposals_decrement_on_approve() {
 				remark: "test".into(),
 			}	
 			.into();
-			assert_ok!(Supersig::propose_call(
+			assert_ok!(Supersig::submit_call(
 				RawOrigin::Signed(BOB()).into(),
 				supersig_account.clone(),
 				Box::new(call)
@@ -231,7 +231,7 @@ fn test_active_proposals_decrement_on_approve() {
 }
 
 #[test]
-	fn test_propose_call_max_active_proposals() {
+	fn test_submit_call_max_active_proposals() {
 		ExtBuilder::default()
 		.balances(vec![])
 		.build()
@@ -252,7 +252,7 @@ fn test_active_proposals_decrement_on_approve() {
 			.into();
 			// propose 3 calls
 			for i in 1..3 {
-					Supersig::propose_call(
+					Supersig::submit_call(
 						RawOrigin::Signed(ALICE()).into(), 
 						supersig_account.clone(), 
 						Box::new(call.clone()),
@@ -265,7 +265,7 @@ fn test_active_proposals_decrement_on_approve() {
 					supersig_account.clone(), 
 					0
 				));
-				assert_ok!(Supersig::propose_call(
+				assert_ok!(Supersig::submit_call(
 					RawOrigin::Signed(ALICE()).into(), 
 					supersig_account.clone(), 
 					Box::new(call.clone()),
@@ -274,7 +274,7 @@ fn test_active_proposals_decrement_on_approve() {
 	}
 
 	#[test]
-	fn test_propose_call_active_proposals_multiple_accounts() {
+	fn test_submit_call_active_proposals_multiple_accounts() {
 		ExtBuilder::default()
 			.balances(vec![])
 			.build()
@@ -337,22 +337,22 @@ fn test_active_proposals_decrement_on_approve() {
 				.into();
 
 				// propose a call with each account
-				assert_ok!(Supersig::propose_call(
+				assert_ok!(Supersig::submit_call(
 					RawOrigin::Signed(ALICE()).into(), 
 					supersig_account.clone(), 
 					Box::new(call.clone()),
 					));
-				assert_ok!(Supersig::propose_call(
+				assert_ok!(Supersig::submit_call(
 					RawOrigin::Signed(BOB()).into(), 
 					supersig_account_1.clone(), 
 					Box::new(call.clone()),
 				));
-				assert_ok!(Supersig::propose_call(
+				assert_ok!(Supersig::submit_call(
 					RawOrigin::Signed(BOB()).into(), 
 					supersig_account_2.clone(), 
 					Box::new(call.clone()),
 				));
-				assert_ok!(Supersig::propose_call(
+				assert_ok!(Supersig::submit_call(
 					RawOrigin::Signed(BOB()).into(), 
 					supersig_account_3.clone(), 
 					Box::new(call.clone()),
@@ -360,7 +360,7 @@ fn test_active_proposals_decrement_on_approve() {
 
 				// try to propose a fifth call just to show that MaxCallPerAccount is per account not the total chain.
 				assert_ok!(
-					Supersig::propose_call(
+					Supersig::submit_call(
 						RawOrigin::Signed(ALICE()).into(), 
 						supersig_account_4.clone(), 
 						Box::new(call.clone()),
@@ -396,13 +396,13 @@ fn test_active_proposals_decrement_on_approve() {
 
 		// Test that we cannot propose more than `MaxCallsPerAccount`
 		for i in 1..=3 {
-			Supersig::propose_call(
+			Supersig::submit_call(
 				RawOrigin::Signed(ALICE()).into(), 
 				supersig_account.clone(), 
 				Box::new(call.clone()),
 			);
 			// assert_noop!(
-			// 	Supersig::propose_call(
+			// 	Supersig::submit_call(
 			// 		RawOrigin::Signed(ALICE()).into(),
 			// 		supersig_account.clone(), 
 			// 		Box::new(call.clone()),
@@ -425,7 +425,7 @@ fn test_active_proposals_decrement_on_approve() {
 				2
 			);
 
-			assert_ok!(Supersig::propose_call(
+			assert_ok!(Supersig::submit_call(
 				RawOrigin::Signed(ALICE()).into(), 
 					supersig_account.clone(), 
 					Box::new(call.clone()),
