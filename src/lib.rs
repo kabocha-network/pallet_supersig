@@ -37,9 +37,9 @@
 //!   /!!\ Reminder /!!\ the creator of the supersig will NOT be added by default, he will
 //!   have to pass his address into the list of added users.
 //!
-//! - `propose_call` - Submit a proposal for the supersig to execute a transaction, which is an amount corresponding to the
+//! - `submit_call` - Submit a proposal for the supersig to execute a transaction, which is an amount corresponding to the
 //!   length of the encoded call will be reserved. The call wraps around the extrinsic which the user is proposing to execute.
-//!    (Anything that requires a vote needs to be wrapped in a proposeCall function.)
+//!    (Anything that requires a vote needs to be wrapped in a submitCall function.)
 //!
 //! - `approve_call` - Vote for the call to be execute. The threshold is enumerated to vote >= SimpleMajority, the
 //!   call is executed. A user can only approve a call once.
@@ -335,10 +335,10 @@ pub mod pallet {
 		/// of the network. The deposit can be partially or fully returned when the call is executed or removed.
 		///
 		///
-		/// To create a proposal use proposeCall. You need to wrap a submit call around all calls
+		/// To create a proposal use submitCall. You need to wrap a submit call around all calls
 		/// that require a vote.
 		///
-		/// `propose_call` will create a proposal on the supersig, that members can approve.
+		/// `submit_call` will create a proposal on the supersig, that members can approve.
 		/// this will lock an amount that depend on the lenght of the encoded call, to prevent spam
 		///
 		/// The dispatch origin for this call must be `Signed`, and the origin must be a
@@ -349,8 +349,8 @@ pub mod pallet {
 		/// Related functions:
 		/// - `Currency::reserve` will be called once to lock the deposit amount
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::propose_call(call.encode().len() as u32))]
-		pub fn propose_call(
+		#[pallet::weight(T::WeightInfo::submit_call(call.encode().len() as u32))]
+		pub fn submit_call(
 			origin: OriginFor<T>,
 			supersig_account: T::AccountId,
 			call: Box<<T as pallet::Config>::Call>,
@@ -365,7 +365,7 @@ pub mod pallet {
 				Error::<T>::CallDataTooLarge
 			);
 
-			// Modify the propose_call extrinsic to check the number of active proposals before allowing a new one
+			// Modify the submit_call extrinsic to check the number of active proposals before allowing a new one
 			let current_active_proposals = Self::active_proposals(supersig_id);
     		ensure!(
 				current_active_proposals < T::MaxCallsPerAccount::get(), Error::<T>::TooManyActiveProposals);
@@ -520,7 +520,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// add members the supersig. You need to wrap this in a proposeCall function.
+		/// add members the supersig. You need to wrap this in a submitCall function.
 		///
 		/// `add members` will add a list of addesses to the members list of the supersig.
 		/// if an address is already present, it will be ignored.
